@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>GYXGAME Posting</title>
+<style>
+:root {
+  --bg: #f4f4f2; --card: #ffffff; --text: #151515; --muted: #6b6b6b;
+  --line: #e2e2de; --accent: #ff6a2b; --accent-text: #ffffff; --ok: #1f9d55;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f0f10; --card: #1a1a1c; --text: #f1f1f1; --muted: #9a9a9a;
+    --line: #2c2c30; --accent: #ff7a3d; --accent-text: #111111; --ok: #3ccf7c;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 520px; margin: 0 auto; padding: 16px 16px 48px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+header h1 { font-size: 15px; letter-spacing: .08em; margin: 0; color: var(--muted); font-weight: 700; }
+.nav { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.nav button { flex: 0 0 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); font-size: 20px; }
+.nav button:disabled { opacity: .35; }
+.day { flex: 1; text-align: center; }
+.day b { display: block; font-size: 18px; }
+.day span { font-size: 13px; color: var(--muted); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-bottom: 12px; }
+.game { font-size: 20px; font-weight: 800; margin: 0 0 2px; }
+.kp { color: var(--muted); font-size: 14px; margin: 0; }
+.strip { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 12px -14px 0; padding: 0 14px 4px; }
+.strip a { flex: 0 0 42%; scroll-snap-align: start; }
+.strip img { width: 100%; aspect-ratio: 9/16; object-fit: cover; border-radius: 10px; display: block; background: var(--line); }
+.btn { display: block; width: 100%; min-height: 50px; border: 0; border-radius: 12px; margin-top: 12px;
+  background: var(--accent); color: var(--accent-text); font-size: 16px; font-weight: 700; }
+.btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+.label { font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--muted); text-transform: uppercase; margin: 0 0 6px; }
+.text { white-space: pre-wrap; word-break: break-word; margin: 0; font-size: 15px; }
+.done { display: flex; align-items: center; gap: 12px; font-weight: 600; }
+.done input { width: 24px; height: 24px; accent-color: var(--ok); }
+.done.on { color: var(--ok); }
+.hint { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--text); color: var(--bg);
+  padding: 10px 16px; border-radius: 999px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.show { opacity: 1; }
+.empty { text-align: center; color: var(--muted); padding: 40px 0; }
+</style>
+</head>
+<body>
+<main>
+  <header><h1>GYXGAME · TIKTOK</h1><span id="count" class="kp"></span></header>
+  <div class="nav">
+    <button id="prev" aria-label="Hari sebelumnya">‹</button>
+    <div class="day"><b id="date"></b><span id="rel"></span></div>
+    <button id="next" aria-label="Hari berikutnya">›</button>
+  </div>
+  <div id="view"></div>
+</main>
+<div id="toast" class="toast"></div>
+<script>
+const DAYS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+let posts = [], idx = 0;
+
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} }
+};
+function todayISO() {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), 1800);
+}
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text); toast("Tersalin ✓"); }
+  catch (e) {
+    const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand("copy"); ta.remove(); toast("Tersalin ✓");
+  }
+}
+async function saveImages(p) {
+  toast("Menyiapkan gambar…");
+  try {
+    const files = await Promise.all(p.images.map(async (src, i) => {
+      const blob = await (await fetch(src)).blob();
+      return new File([blob], `${p.date}_${p.slug}_${i + 1}.jpg`, { type: "image/jpeg" });
+    }));
+    if (navigator.canShare && navigator.canShare({ files })) {
+      await navigator.share({ files });
+      return;
+    }
+    files.forEach(f => {
+      const a = document.createElement("a"); a.href = URL.createObjectURL(f); a.download = f.name;
+      document.body.appendChild(a); a.click(); a.remove();
+    });
+    toast("Gambar diunduh");
+  } catch (e) {
+    if (e.name !== "AbortError") toast("Gagal, tekan lama tiap gambar untuk simpan");
+  }
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+function render() {
+  const view = document.getElementById("view");
+  if (!posts.length) { view.innerHTML = '<p class="empty">Belum ada postingan.</p>'; return; }
+  const p = posts[idx];
+  const d = new Date(p.date + "T00:00:00");
+  const diff = Math.round((d - new Date(todayISO() + "T00:00:00")) / 86400000);
+  document.getElementById("date").textContent = `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  document.getElementById("rel").textContent =
+    diff === 0 ? "Hari ini" : diff === 1 ? "Besok" : diff === -1 ? "Kemarin" : diff > 0 ? `${diff} hari lagi` : `${-diff} hari lalu`;
+  document.getElementById("prev").disabled = idx === 0;
+  document.getElementById("next").disabled = idx === posts.length - 1;
+  const key = "done:" + p.id, done = !!store.get(key);
+  document.getElementById("count").textContent = `${posts.filter(x => store.get("done:" + x.id)).length}/${posts.length} diposting`;
+
+  view.innerHTML = `
+    <div class="card">
+      <p class="game">${esc(p.game)}</p>
+      ${p.key_point ? `<p class="kp">${esc(p.key_point)}</p>` : ""}
+      <div class="strip">${p.images.map(s => `<a href="${esc(s)}" target="_blank"><img src="${esc(s)}" alt="" loading="lazy"></a>`).join("")}</div>
+      <button class="btn" id="save">💾 Simpan ${p.images.length} gambar</button>
+      <p class="hint">Pilih "Simpan gambar" di menu share. Kalau nggak muncul, tekan lama tiap gambar.</p>
+    </div>
+    ${p.title ? `<div class="card">
+      <p class="label">Judul (maks 90)</p>
+      <p class="text">${esc(p.title)}</p>
+      <button class="btn ghost" id="copyTitle">📋 Copy judul</button>
+    </div>` : ""}
+    <div class="card">
+      <p class="label">Caption</p>
+      <p class="text">${esc(p.caption)}</p>
+      <button class="btn" id="copyCap">📋 Copy caption</button>
+    </div>
+    <div class="card">
+      <label class="done ${done ? "on" : ""}"><input type="checkbox" id="done" ${done ? "checked" : ""}> Sudah diposting</label>
+      <p class="hint">Jangan lupa pilih sound yang lagi trending.</p>
+    </div>`;
+  document.getElementById("save").onclick = () => saveImages(p);
+  document.getElementById("copyCap").onclick = () => copy(p.caption);
+  const ct = document.getElementById("copyTitle"); if (ct) ct.onclick = () => copy(p.title);
+  document.getElementById("done").onchange = e => { store.set(key, e.target.checked ? "1" : ""); render(); };
+}
+
+document.getElementById("prev").onclick = () => { if (idx > 0) { idx--; render(); scrollTo(0, 0); } };
+document.getElementById("next").onclick = () => { if (idx < posts.length - 1) { idx++; render(); scrollTo(0, 0); } };
+
+fetch("posts.json", { cache: "no-store" }).then(r => r.json()).then(list => {
+  posts = list.sort((a, b) => a.date.localeCompare(b.date));
+  const t = todayISO();
+  idx = posts.findIndex(p => p.date >= t);
+  if (idx < 0) idx = posts.length - 1;
+  render();
+}).catch(() => { document.getElementById("view").innerHTML = '<p class="empty">Gagal memuat data.</p>'; });
+</script>
+</body>
+</html>
