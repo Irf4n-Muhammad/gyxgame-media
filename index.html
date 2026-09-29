@@ -91,6 +91,29 @@ header h1 { font-size: 15px; letter-spacing: .08em; margin: 0; color: var(--mute
   padding: 10px 16px; border-radius: 999px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
 .toast.show { opacity: 1; }
 .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+.cell .g { display: none; }
+/* laptop: calendar left, selected day right */
+@media (min-width: 960px) {
+  main { max-width: 1480px; padding: 24px 32px 48px; }
+  header h1 { font-size: 17px; }
+  .tabs { display: none; }
+  .split { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(400px, 1fr); gap: 24px; align-items: start; }
+  .col-day { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; padding-right: 4px; }
+  .grid { gap: 8px; }
+  .cell { aspect-ratio: 4/5; border-radius: 10px; cursor: pointer; }
+  .cell .n { font-size: 15px; top: 6px; left: 8px; }
+  .cell .g { display: block; position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; padding: 18px 8px 6px;
+    font-size: 12px; font-weight: 700; color: #fff; text-align: left; line-height: 1.2;
+    background: linear-gradient(transparent, rgba(0,0,0,.85)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cell .ok { width: 20px; height: 20px; line-height: 20px; font-size: 12px; top: 6px; right: 6px; bottom: auto; }
+  .cell.has:hover img { filter: brightness(1.1); }
+  .cell.sel { outline: 3px solid var(--text); outline-offset: 2px; }
+  .agenda li { padding: 10px 8px; }
+  .agenda li.sel { background: var(--soft); border-radius: 10px; }
+  .col-day .strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow: visible; margin: 12px 0 0; padding: 0; }
+  .col-day .strip a { flex: none; }
+  .btn { cursor: pointer; }
+}
 </style>
 </head>
 <body>
@@ -157,6 +180,8 @@ async function saveImages(p) {
   }
 }
 
+const wide = matchMedia("(min-width: 960px)");
+
 function shell(inner) {
   const personas = [...new Set(all.map(p => p.persona || "clean"))];
   const count = posts.filter(isDone).length;
@@ -173,13 +198,13 @@ function shell(inner) {
   app.querySelectorAll("[data-persona]").forEach(b => b.onclick = () => { persona = b.dataset.persona; filter(); render(); });
 }
 
-function renderDay() {
-  if (!posts.length) return shell('<p class="empty">Belum ada postingan.</p>');
+function dayHTML() {
+  if (!posts.length) return '<p class="empty">Belum ada postingan.</p>';
   const p = posts[idx], d = new Date(p.day + "T00:00:00");
   const diff = Math.round((d - new Date(todayISO() + "T00:00:00")) / 86400000);
   const rel = diff === 0 ? "Hari ini" : diff === 1 ? "Besok" : diff === -1 ? "Kemarin" : diff > 0 ? `${diff} hari lagi` : `${-diff} hari lalu`;
   const done = isDone(p);
-  shell(`
+  return `
     <div class="nav">
       <button id="prev" aria-label="Sebelumnya" ${idx === 0 ? "disabled" : ""}>‹</button>
       <div class="day"><b>${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}</b><span>${rel}${p.persona && p.persona !== "clean" ? " · " + esc(p.persona) : ""}</span></div>
@@ -203,8 +228,16 @@ function renderDay() {
     <div class="card">
       <label class="done ${done ? "on" : ""}"><input type="checkbox" id="done" ${done ? "checked" : ""}> Sudah diposting di TikTok</label>
       <p class="hint">Jangan lupa pilih sound yang lagi trending.</p>
-    </div>`);
-  const go = i => { idx = i; render(); scrollTo(0, 0); };
+    </div>`;
+}
+
+function bindDay() {
+  const p = posts[idx];
+  if (!p) return;
+  const go = i => {
+    idx = i; month = [posts[i].at.getFullYear(), posts[i].at.getMonth()];
+    render(); if (!wide.matches) scrollTo(0, 0);
+  };
   document.getElementById("prev").onclick = () => idx > 0 && go(idx - 1);
   document.getElementById("next").onclick = () => idx < posts.length - 1 && go(idx + 1);
   document.getElementById("save").onclick = () => saveImages(p);
@@ -213,10 +246,10 @@ function renderDay() {
   document.getElementById("done").onchange = e => { store.set("done:" + p.id, e.target.checked ? "1" : ""); render(); };
 }
 
-function renderCal() {
+function calHTML() {
   const [y, m] = month;
   const first = new Date(y, m, 1), days = new Date(y, m + 1, 0).getDate();
-  const lead = (first.getDay() + 6) % 7, today = todayISO();
+  const lead = (first.getDay() + 6) % 7, today = todayISO(), sel = wide.matches ? idx : -1;
   const byDate = {};
   posts.forEach((p, i) => (byDate[p.day] = byDate[p.day] || []).push(i));
   const key = d => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -224,32 +257,50 @@ function renderCal() {
   cells += '<div class="cell blank"></div>'.repeat(lead);
   for (let d = 1; d <= days; d++) {
     const k = key(d), list = byDate[k] || [], p = list.length ? posts[list[0]] : null;
-    const cls = ["cell", p ? "has" : "", k === today ? "today" : "", k < today ? "past" : ""].join(" ");
+    const cls = ["cell", p ? "has" : "", k === today ? "today" : "", k < today ? "past" : "", list.includes(sel) ? "sel" : ""].join(" ");
     cells += `<button class="${cls}" ${p ? `data-i="${list[0]}"` : "disabled"} aria-label="${d} ${MONTHS_LONG[m]}${p ? ": " + esc(p.game) : ""}">
       ${p ? `<img src="${esc(p.images[0])}" alt="" loading="lazy">` : ""}<span class="n">${d}</span>
+      ${p ? `<span class="g">${esc(p.game)}</span>` : ""}
       ${p && list.every(i => isDone(posts[i])) ? '<span class="ok">✓</span>' : ""}</button>`;
   }
   const monthPosts = posts.map((p, i) => [p, i]).filter(([p]) => p.day.startsWith(key(1).slice(0, 7)));
   const agenda = monthPosts.map(([p, i]) => {
     const d = new Date(p.day + "T00:00:00"), done = isDone(p);
-    return `<li><button data-i="${i}"><img src="${esc(p.images[0])}" alt="" loading="lazy">
+    return `<li class="${i === sel ? "sel" : ""}"><button data-i="${i}"><img src="${esc(p.images[0])}" alt="" loading="lazy">
       <span class="t"><b>${esc(p.game)}</b><span>${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} · ${esc(localTime(p))}${p.persona && p.persona !== "clean" ? " · " + esc(p.persona) : ""}</span></span></button>
       <span class="st ${done ? "ok" : ""}">${done ? "✓ TikTok" : p.day < today ? "belum" : ""}</span></li>`;
   }).join("");
-  shell(`
+  return `
     <div class="nav">
       <button id="pm" aria-label="Bulan sebelumnya">‹</button>
       <div class="day"><b>${MONTHS_LONG[m]} ${y}</b><span>${monthPosts.length} postingan</span></div>
       <button id="nm" aria-label="Bulan berikutnya">›</button>
     </div>
     <div class="card"><div class="grid">${cells}</div></div>
-    ${agenda ? `<div class="card"><ul class="agenda">${agenda}</ul></div>` : '<p class="empty">Belum ada jadwal bulan ini.</p>'}`);
-  document.getElementById("pm").onclick = () => { month = m === 0 ? [y - 1, 11] : [y, m - 1]; render(); };
-  document.getElementById("nm").onclick = () => { month = m === 11 ? [y + 1, 0] : [y, m + 1]; render(); };
-  app.querySelectorAll("[data-i]").forEach(b => b.onclick = () => { idx = +b.dataset.i; tab = "day"; render(); scrollTo(0, 0); });
+    ${agenda ? `<div class="card"><ul class="agenda">${agenda}</ul></div>` : '<p class="empty">Belum ada jadwal bulan ini.</p>'}`;
 }
 
-function render() { tab === "cal" ? renderCal() : renderDay(); }
+function bindCal() {
+  const [y, m] = month;
+  document.getElementById("pm").onclick = () => { month = m === 0 ? [y - 1, 11] : [y, m - 1]; render(); };
+  document.getElementById("nm").onclick = () => { month = m === 11 ? [y + 1, 0] : [y, m + 1]; render(); };
+  app.querySelectorAll("[data-i]").forEach(b => b.onclick = () => {
+    idx = +b.dataset.i;
+    if (!wide.matches) { tab = "day"; scrollTo(0, 0); }
+    render();
+  });
+}
+
+/* Phone: one view with tabs. Laptop: calendar and the selected day side by side. */
+function render() {
+  if (wide.matches) {
+    shell(`<div class="split"><section class="col-cal">${calHTML()}</section><section class="col-day">${dayHTML()}</section></div>`);
+    bindCal(); bindDay();
+  } else if (tab === "cal") { shell(calHTML()); bindCal(); }
+  else { shell(dayHTML()); bindDay(); }
+}
+wide.addEventListener("change", () => all.length && render());
+
 function filter() {
   const cur = posts[idx];
   posts = all.filter(p => !persona || (p.persona || "clean") === persona);
