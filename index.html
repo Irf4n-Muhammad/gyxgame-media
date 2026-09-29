@@ -19,7 +19,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--text);
   font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-main { max-width: 520px; margin: 0 auto; padding: 16px 16px 48px; }
+main { max-width: 520px; overflow-x: hidden; margin: 0 auto; padding: 16px 16px 48px; }
 header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
 header h1 { font-size: 15px; letter-spacing: .08em; margin: 0; color: var(--muted); font-weight: 700; }
 .muted { color: var(--muted); font-size: 14px; }
@@ -56,9 +56,9 @@ header h1 { font-size: 15px; letter-spacing: .08em; margin: 0; color: var(--mute
 .done.on { color: var(--ok); }
 .hint { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
 /* calendar */
-.grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
 .dow { text-align: center; font-size: 12px; font-weight: 700; color: var(--muted); padding: 4px 0; }
-.cell { position: relative; aspect-ratio: 3/4; border-radius: 8px; background: var(--soft); border: 0; padding: 0;
+.cell { position: relative; min-width: 0; aspect-ratio: 3/4; border-radius: 8px; background: var(--soft); border: 0; padding: 0;
   overflow: hidden; color: var(--text); font: inherit; }
 .cell.blank { background: transparent; }
 .cell img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
