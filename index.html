@@ -132,10 +132,7 @@ function postInstant(p) {
   let t = guess - offset(guess);
   return new Date(guess - offset(t));
 }
-function localTime(p) {
-  const at = postInstant(p), hm = at.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
-  return iso(at) === p.date ? hm : `${DAYS[at.getDay()]} ${at.getDate()} ${MONTHS[at.getMonth()]}, ${hm}`;
-}
+const localTime = p => p.at.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 async function saveImages(p) {
   toast("Menyiapkan gambar…");
   try {
@@ -172,7 +169,7 @@ function shell(inner) {
 
 function renderDay() {
   if (!posts.length) return shell('<p class="empty">Belum ada postingan.</p>');
-  const p = posts[idx], d = new Date(p.date + "T00:00:00");
+  const p = posts[idx], d = new Date(p.day + "T00:00:00");
   const diff = Math.round((d - new Date(todayISO() + "T00:00:00")) / 86400000);
   const rel = diff === 0 ? "Hari ini" : diff === 1 ? "Besok" : diff === -1 ? "Kemarin" : diff > 0 ? `${diff} hari lagi` : `${-diff} hari lalu`;
   const done = isDone(p);
@@ -186,7 +183,7 @@ function renderDay() {
       <p class="game">${esc(p.game)}</p>
       ${p.key_point ? `<p class="kp">${esc(p.key_point)}</p>` : ""}
       <div class="times">
-        <span>🕖 Posting TikTok sekitar <b>${esc(localTime(p))}</b></span>
+        <span>🕖 Posting TikTok sekitar jam <b>${esc(localTime(p))}</b></span>
         <span class="muted">IG + Threads tayang otomatis di jam yang sama</span>
       </div>
       <div class="strip">${p.images.map(s => `<a href="${esc(s)}" target="_blank"><img src="${esc(s)}" alt="" loading="lazy"></a>`).join("")}</div>
@@ -215,7 +212,7 @@ function renderCal() {
   const first = new Date(y, m, 1), days = new Date(y, m + 1, 0).getDate();
   const lead = (first.getDay() + 6) % 7, today = todayISO();
   const byDate = {};
-  posts.forEach((p, i) => (byDate[p.date] = byDate[p.date] || []).push(i));
+  posts.forEach((p, i) => (byDate[p.day] = byDate[p.day] || []).push(i));
   const key = d => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
   let cells = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map(x => `<div class="dow">${x}</div>`).join("");
   cells += '<div class="cell blank"></div>'.repeat(lead);
@@ -226,12 +223,12 @@ function renderCal() {
       ${p ? `<img src="${esc(p.images[0])}" alt="" loading="lazy">` : ""}<span class="n">${d}</span>
       ${p && list.every(i => isDone(posts[i])) ? '<span class="ok">✓</span>' : ""}</button>`;
   }
-  const monthPosts = posts.map((p, i) => [p, i]).filter(([p]) => p.date.startsWith(key(1).slice(0, 7)));
+  const monthPosts = posts.map((p, i) => [p, i]).filter(([p]) => p.day.startsWith(key(1).slice(0, 7)));
   const agenda = monthPosts.map(([p, i]) => {
-    const d = new Date(p.date + "T00:00:00"), done = isDone(p);
+    const d = new Date(p.day + "T00:00:00"), done = isDone(p);
     return `<li><button data-i="${i}"><img src="${esc(p.images[0])}" alt="" loading="lazy">
       <span class="t"><b>${esc(p.game)}</b><span>${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} · ${esc(localTime(p))}${p.persona && p.persona !== "clean" ? " · " + esc(p.persona) : ""}</span></span></button>
-      <span class="st ${done ? "ok" : ""}">${done ? "✓ TikTok" : p.date < today ? "belum" : ""}</span></li>`;
+      <span class="st ${done ? "ok" : ""}">${done ? "✓ TikTok" : p.day < today ? "belum" : ""}</span></li>`;
   }).join("");
   shell(`
     <div class="nav">
@@ -250,8 +247,8 @@ function render() { tab === "cal" ? renderCal() : renderDay(); }
 function filter() {
   const cur = posts[idx];
   posts = all.filter(p => !persona || (p.persona || "clean") === persona);
-  const t = todayISO();
-  idx = cur && posts.includes(cur) ? posts.indexOf(cur) : posts.findIndex(p => p.date >= t);
+  const since = Date.now() - 12 * 3600e3;
+  idx = cur && posts.includes(cur) ? posts.indexOf(cur) : posts.findIndex(p => p.at.getTime() >= since);
   if (idx < 0) idx = Math.max(0, posts.length - 1);
 }
 
@@ -267,9 +264,10 @@ if (params.get("code")) {
   history.replaceState(null, "", location.pathname);
 } else {
   fetch("posts.json", { cache: "no-store" }).then(r => r.json()).then(list => {
-    all = list.sort((a, b) => a.date.localeCompare(b.date) || (a.persona || "").localeCompare(b.persona || ""));
+    list.forEach(p => { p.at = postInstant(p); p.day = iso(p.at); });  // when and on which local day it goes out
+    all = list.sort((a, b) => a.at - b.at || (a.persona || "").localeCompare(b.persona || ""));
     filter();
-    const focus = posts[idx] ? new Date(posts[idx].date + "T00:00:00") : new Date();
+    const focus = posts[idx] ? posts[idx].at : new Date();
     month = [focus.getFullYear(), focus.getMonth()];
     if (location.hash === "#kalender") tab = "cal";
     render();
