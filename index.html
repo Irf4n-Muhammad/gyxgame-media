@@ -8,12 +8,12 @@
 <style>
 :root {
   --bg: #f4f4f2; --card: #ffffff; --text: #151515; --muted: #6b6b6b;
-  --line: #e2e2de; --accent: #ff6a2b; --accent-text: #ffffff; --ok: #1f9d55;
+  --line: #e2e2de; --accent: #ff6a2b; --accent-text: #ffffff; --ok: #1f9d55; --soft: #ececea;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0f0f10; --card: #1a1a1c; --text: #f1f1f1; --muted: #9a9a9a;
-    --line: #2c2c30; --accent: #ff7a3d; --accent-text: #111111; --ok: #3ccf7c;
+    --line: #2c2c30; --accent: #ff7a3d; --accent-text: #111111; --ok: #3ccf7c; --soft: #242428;
   }
 }
 * { box-sizing: border-box; }
@@ -22,6 +22,15 @@ html, body { margin: 0; background: var(--bg); color: var(--text);
 main { max-width: 520px; margin: 0 auto; padding: 16px 16px 48px; }
 header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
 header h1 { font-size: 15px; letter-spacing: .08em; margin: 0; color: var(--muted); font-weight: 700; }
+.muted { color: var(--muted); font-size: 14px; }
+.tabs { display: flex; background: var(--soft); border-radius: 12px; padding: 4px; margin-bottom: 12px; }
+.tabs button { flex: 1; min-height: 40px; border: 0; border-radius: 9px; background: transparent; color: var(--muted);
+  font-size: 15px; font-weight: 700; }
+.tabs button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.chips { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; }
+.chips button { flex: 0 0 auto; min-height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--card); color: var(--text); font-size: 14px; }
+.chips button.on { background: var(--text); color: var(--bg); border-color: var(--text); }
 .nav { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .nav button { flex: 0 0 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line);
   background: var(--card); color: var(--text); font-size: 20px; }
@@ -32,6 +41,8 @@ header h1 { font-size: 15px; letter-spacing: .08em; margin: 0; color: var(--mute
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-bottom: 12px; }
 .game { font-size: 20px; font-weight: 800; margin: 0 0 2px; }
 .kp { color: var(--muted); font-size: 14px; margin: 0; }
+.times { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; font-size: 14px; }
+.times b { font-weight: 700; }
 .strip { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 12px -14px 0; padding: 0 14px 4px; }
 .strip a { flex: 0 0 42%; scroll-snap-align: start; }
 .strip img { width: 100%; aspect-ratio: 9/16; object-fit: cover; border-radius: 10px; display: block; background: var(--line); }
@@ -44,6 +55,32 @@ header h1 { font-size: 15px; letter-spacing: .08em; margin: 0; color: var(--mute
 .done input { width: 24px; height: 24px; accent-color: var(--ok); }
 .done.on { color: var(--ok); }
 .hint { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+/* calendar */
+.grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.dow { text-align: center; font-size: 12px; font-weight: 700; color: var(--muted); padding: 4px 0; }
+.cell { position: relative; aspect-ratio: 3/4; border-radius: 8px; background: var(--soft); border: 0; padding: 0;
+  overflow: hidden; color: var(--text); font: inherit; }
+.cell.blank { background: transparent; }
+.cell img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cell .n { position: absolute; top: 3px; left: 5px; font-size: 12px; font-weight: 800; z-index: 1;
+  text-shadow: 0 0 3px rgba(0,0,0,.6); }
+.cell.has .n { color: #fff; }
+.cell.today { outline: 2px solid var(--accent); outline-offset: 1px; }
+.cell.past.has img { filter: grayscale(.6) brightness(.7); }
+.cell .ok { position: absolute; right: 3px; bottom: 3px; width: 16px; height: 16px; border-radius: 50%; z-index: 1;
+  background: var(--ok); color: #fff; font-size: 11px; line-height: 16px; text-align: center; font-weight: 800; }
+.agenda { list-style: none; margin: 0; padding: 0; }
+.agenda li { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.agenda li:first-child { border-top: 0; }
+.agenda button { all: unset; display: flex; align-items: center; gap: 10px; flex: 1; cursor: pointer; min-width: 0; }
+.agenda img { width: 36px; height: 48px; object-fit: cover; border-radius: 6px; background: var(--soft); flex: 0 0 auto; }
+.agenda .t { min-width: 0; }
+.agenda .t b { display: block; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.agenda .t span { font-size: 13px; color: var(--muted); }
+.agenda .st { font-size: 13px; font-weight: 700; color: var(--muted); flex: 0 0 auto; }
+.agenda .st.ok { color: var(--ok); }
+.code { font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; word-break: break-all; background: var(--soft);
+  padding: 10px; border-radius: 10px; margin: 8px 0 0; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--text); color: var(--bg);
   padding: 10px 16px; border-radius: 999px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
 .toast.show { opacity: 1; }
@@ -51,40 +88,53 @@ header h1 { font-size: 15px; letter-spacing: .08em; margin: 0; color: var(--mute
 </style>
 </head>
 <body>
-<main>
-  <header><h1>GYXGAME · TIKTOK</h1><span id="count" class="kp"></span></header>
-  <div class="nav">
-    <button id="prev" aria-label="Hari sebelumnya">‹</button>
-    <div class="day"><b id="date"></b><span id="rel"></span></div>
-    <button id="next" aria-label="Hari berikutnya">›</button>
-  </div>
-  <div id="view"></div>
-</main>
+<main id="app"></main>
 <div id="toast" class="toast"></div>
 <script>
 const DAYS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-let posts = [], idx = 0;
+const MONTHS_LONG = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+const app = document.getElementById("app");
+let all = [], posts = [], idx = 0, tab = "day", persona = "", month = null;
 
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
   set(k, v) { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} }
 };
-function todayISO() {
-  const d = new Date();
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const isDone = p => !!store.get("done:" + p.id);
+function iso(d) { return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
+const todayISO = () => iso(new Date());
 function toast(msg) {
   const t = document.getElementById("toast");
   t.textContent = msg; t.classList.add("show");
   clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), 1800);
 }
 async function copy(text) {
-  try { await navigator.clipboard.writeText(text); toast("Tersalin ✓"); }
+  try { await navigator.clipboard.writeText(text); }
   catch (e) {
     const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta);
-    ta.select(); document.execCommand("copy"); ta.remove(); toast("Tersalin ✓");
+    ta.select(); document.execCommand("copy"); ta.remove();
   }
+  toast("Tersalin ✓");
+}
+
+/* A post's time is wall-clock time in its own timezone (e.g. 19:00 New York); show it in the viewer's time. */
+function postInstant(p) {
+  const [y, m, d] = p.date.split("-").map(Number), [h, mi] = (p.time || "12:00").split(":").map(Number);
+  const tz = p.tz || "America/New_York", guess = Date.UTC(y, m - 1, d, h, mi);
+  const offset = t => {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23",
+      year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+      .formatToParts(new Date(t)).map(x => [x.type, x.value]));
+    return Date.UTC(+parts.year, parts.month - 1, +parts.day, +parts.hour, +parts.minute) - t;
+  };
+  let t = guess - offset(guess);
+  return new Date(guess - offset(t));
+}
+function localTime(p) {
+  const at = postInstant(p), hm = at.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+  return iso(at) === p.date ? hm : `${DAYS[at.getDay()]} ${at.getDate()} ${MONTHS[at.getMonth()]}, ${hm}`;
 }
 async function saveImages(p) {
   toast("Menyiapkan gambar…");
@@ -93,10 +143,7 @@ async function saveImages(p) {
       const blob = await (await fetch(src)).blob();
       return new File([blob], `${p.date}_${p.slug}_${i + 1}.jpg`, { type: "image/jpeg" });
     }));
-    if (navigator.canShare && navigator.canShare({ files })) {
-      await navigator.share({ files });
-      return;
-    }
+    if (navigator.canShare && navigator.canShare({ files })) { await navigator.share({ files }); return; }
     files.forEach(f => {
       const a = document.createElement("a"); a.href = URL.createObjectURL(f); a.download = f.name;
       document.body.appendChild(a); a.click(); a.remove();
@@ -106,60 +153,124 @@ async function saveImages(p) {
     if (e.name !== "AbortError") toast("Gagal, tekan lama tiap gambar untuk simpan");
   }
 }
-function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 
-function render() {
-  const view = document.getElementById("view");
-  if (!posts.length) { view.innerHTML = '<p class="empty">Belum ada postingan.</p>'; return; }
-  const p = posts[idx];
-  const d = new Date(p.date + "T00:00:00");
+function shell(inner) {
+  const personas = [...new Set(all.map(p => p.persona || "clean"))];
+  const count = posts.filter(isDone).length;
+  app.innerHTML = `
+    <header><h1>GYXGAME · POSTING</h1><span class="muted">${count}/${posts.length} TikTok</span></header>
+    <div class="tabs"><button data-tab="day" class="${tab === "day" ? "on" : ""}">Hari ini</button>
+      <button data-tab="cal" class="${tab === "cal" ? "on" : ""}">Kalender</button></div>
+    ${personas.length > 1 ? `<div class="chips">${["", ...personas].map(x =>
+      `<button data-persona="${esc(x)}" class="${x === persona ? "on" : ""}">${x ? esc(x) : "Semua"}</button>`).join("")}</div>` : ""}
+    ${inner}`;
+  app.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { tab = b.dataset.tab; render(); });
+  app.querySelectorAll("[data-persona]").forEach(b => b.onclick = () => { persona = b.dataset.persona; filter(); render(); });
+}
+
+function renderDay() {
+  if (!posts.length) return shell('<p class="empty">Belum ada postingan.</p>');
+  const p = posts[idx], d = new Date(p.date + "T00:00:00");
   const diff = Math.round((d - new Date(todayISO() + "T00:00:00")) / 86400000);
-  document.getElementById("date").textContent = `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`;
-  document.getElementById("rel").textContent =
-    diff === 0 ? "Hari ini" : diff === 1 ? "Besok" : diff === -1 ? "Kemarin" : diff > 0 ? `${diff} hari lagi` : `${-diff} hari lalu`;
-  document.getElementById("prev").disabled = idx === 0;
-  document.getElementById("next").disabled = idx === posts.length - 1;
-  const key = "done:" + p.id, done = !!store.get(key);
-  document.getElementById("count").textContent = `${posts.filter(x => store.get("done:" + x.id)).length}/${posts.length} diposting`;
-
-  view.innerHTML = `
+  const rel = diff === 0 ? "Hari ini" : diff === 1 ? "Besok" : diff === -1 ? "Kemarin" : diff > 0 ? `${diff} hari lagi` : `${-diff} hari lalu`;
+  const done = isDone(p);
+  shell(`
+    <div class="nav">
+      <button id="prev" aria-label="Sebelumnya" ${idx === 0 ? "disabled" : ""}>‹</button>
+      <div class="day"><b>${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}</b><span>${rel}${p.persona && p.persona !== "clean" ? " · " + esc(p.persona) : ""}</span></div>
+      <button id="next" aria-label="Berikutnya" ${idx === posts.length - 1 ? "disabled" : ""}>›</button>
+    </div>
     <div class="card">
       <p class="game">${esc(p.game)}</p>
       ${p.key_point ? `<p class="kp">${esc(p.key_point)}</p>` : ""}
+      <div class="times">
+        <span>🕖 Posting TikTok sekitar <b>${esc(localTime(p))}</b></span>
+        <span class="muted">IG + Threads tayang otomatis di jam yang sama</span>
+      </div>
       <div class="strip">${p.images.map(s => `<a href="${esc(s)}" target="_blank"><img src="${esc(s)}" alt="" loading="lazy"></a>`).join("")}</div>
       <button class="btn" id="save">💾 Simpan ${p.images.length} gambar</button>
       <p class="hint">Pilih "Simpan gambar" di menu share. Kalau nggak muncul, tekan lama tiap gambar.</p>
     </div>
-    ${p.title ? `<div class="card">
-      <p class="label">Judul (maks 90)</p>
-      <p class="text">${esc(p.title)}</p>
-      <button class="btn ghost" id="copyTitle">📋 Copy judul</button>
-    </div>` : ""}
+    ${p.title ? `<div class="card"><p class="label">Judul (maks 90)</p><p class="text">${esc(p.title)}</p>
+      <button class="btn ghost" id="copyTitle">📋 Copy judul</button></div>` : ""}
+    <div class="card"><p class="label">Caption</p><p class="text">${esc(p.caption)}</p>
+      <button class="btn" id="copyCap">📋 Copy caption</button></div>
     <div class="card">
-      <p class="label">Caption</p>
-      <p class="text">${esc(p.caption)}</p>
-      <button class="btn" id="copyCap">📋 Copy caption</button>
-    </div>
-    <div class="card">
-      <label class="done ${done ? "on" : ""}"><input type="checkbox" id="done" ${done ? "checked" : ""}> Sudah diposting</label>
+      <label class="done ${done ? "on" : ""}"><input type="checkbox" id="done" ${done ? "checked" : ""}> Sudah diposting di TikTok</label>
       <p class="hint">Jangan lupa pilih sound yang lagi trending.</p>
-    </div>`;
+    </div>`);
+  const go = i => { idx = i; render(); scrollTo(0, 0); };
+  document.getElementById("prev").onclick = () => idx > 0 && go(idx - 1);
+  document.getElementById("next").onclick = () => idx < posts.length - 1 && go(idx + 1);
   document.getElementById("save").onclick = () => saveImages(p);
   document.getElementById("copyCap").onclick = () => copy(p.caption);
   const ct = document.getElementById("copyTitle"); if (ct) ct.onclick = () => copy(p.title);
-  document.getElementById("done").onchange = e => { store.set(key, e.target.checked ? "1" : ""); render(); };
+  document.getElementById("done").onchange = e => { store.set("done:" + p.id, e.target.checked ? "1" : ""); render(); };
 }
 
-document.getElementById("prev").onclick = () => { if (idx > 0) { idx--; render(); scrollTo(0, 0); } };
-document.getElementById("next").onclick = () => { if (idx < posts.length - 1) { idx++; render(); scrollTo(0, 0); } };
+function renderCal() {
+  const [y, m] = month;
+  const first = new Date(y, m, 1), days = new Date(y, m + 1, 0).getDate();
+  const lead = (first.getDay() + 6) % 7, today = todayISO();
+  const byDate = {};
+  posts.forEach((p, i) => (byDate[p.date] = byDate[p.date] || []).push(i));
+  const key = d => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  let cells = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map(x => `<div class="dow">${x}</div>`).join("");
+  cells += '<div class="cell blank"></div>'.repeat(lead);
+  for (let d = 1; d <= days; d++) {
+    const k = key(d), list = byDate[k] || [], p = list.length ? posts[list[0]] : null;
+    const cls = ["cell", p ? "has" : "", k === today ? "today" : "", k < today ? "past" : ""].join(" ");
+    cells += `<button class="${cls}" ${p ? `data-i="${list[0]}"` : "disabled"} aria-label="${d} ${MONTHS_LONG[m]}${p ? ": " + esc(p.game) : ""}">
+      ${p ? `<img src="${esc(p.images[0])}" alt="" loading="lazy">` : ""}<span class="n">${d}</span>
+      ${p && list.every(i => isDone(posts[i])) ? '<span class="ok">✓</span>' : ""}</button>`;
+  }
+  const monthPosts = posts.map((p, i) => [p, i]).filter(([p]) => p.date.startsWith(key(1).slice(0, 7)));
+  const agenda = monthPosts.map(([p, i]) => {
+    const d = new Date(p.date + "T00:00:00"), done = isDone(p);
+    return `<li><button data-i="${i}"><img src="${esc(p.images[0])}" alt="" loading="lazy">
+      <span class="t"><b>${esc(p.game)}</b><span>${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} · ${esc(localTime(p))}${p.persona && p.persona !== "clean" ? " · " + esc(p.persona) : ""}</span></span></button>
+      <span class="st ${done ? "ok" : ""}">${done ? "✓ TikTok" : p.date < today ? "belum" : ""}</span></li>`;
+  }).join("");
+  shell(`
+    <div class="nav">
+      <button id="pm" aria-label="Bulan sebelumnya">‹</button>
+      <div class="day"><b>${MONTHS_LONG[m]} ${y}</b><span>${monthPosts.length} postingan</span></div>
+      <button id="nm" aria-label="Bulan berikutnya">›</button>
+    </div>
+    <div class="card"><div class="grid">${cells}</div></div>
+    ${agenda ? `<div class="card"><ul class="agenda">${agenda}</ul></div>` : '<p class="empty">Belum ada jadwal bulan ini.</p>'}`);
+  document.getElementById("pm").onclick = () => { month = m === 0 ? [y - 1, 11] : [y, m - 1]; render(); };
+  document.getElementById("nm").onclick = () => { month = m === 11 ? [y + 1, 0] : [y, m + 1]; render(); };
+  app.querySelectorAll("[data-i]").forEach(b => b.onclick = () => { idx = +b.dataset.i; tab = "day"; render(); scrollTo(0, 0); });
+}
 
-fetch("posts.json", { cache: "no-store" }).then(r => r.json()).then(list => {
-  posts = list.sort((a, b) => a.date.localeCompare(b.date));
+function render() { tab === "cal" ? renderCal() : renderDay(); }
+function filter() {
+  const cur = posts[idx];
+  posts = all.filter(p => !persona || (p.persona || "clean") === persona);
   const t = todayISO();
-  idx = posts.findIndex(p => p.date >= t);
-  if (idx < 0) idx = posts.length - 1;
-  render();
-}).catch(() => { document.getElementById("view").innerHTML = '<p class="empty">Gagal memuat data.</p>'; });
+  idx = cur && posts.includes(cur) ? posts.indexOf(cur) : posts.findIndex(p => p.date >= t);
+  if (idx < 0) idx = Math.max(0, posts.length - 1);
+}
+
+/* Landing page for the Instagram / Threads login used by add_account.py */
+const params = new URLSearchParams(location.search);
+if (params.get("code")) {
+  const code = params.get("code").split("#")[0], net = params.get("state") === "threads" ? "Threads" : params.get("state") === "instagram" ? "Instagram" : "Login";
+  app.innerHTML = `<header><h1>GYXGAME · ${esc(net.toUpperCase())}</h1></header>
+    <div class="card"><p class="game">✅ Kode ${esc(net)} diterima</p>
+      <p class="kp">Copy kode ini lalu paste ke PowerShell yang sedang menunggu. Kode cuma berlaku sebentar.</p>
+      <p class="code">${esc(code)}</p><button class="btn" id="cc">📋 Copy kode</button></div>`;
+  document.getElementById("cc").onclick = () => copy(code);
+  history.replaceState(null, "", location.pathname);
+} else {
+  fetch("posts.json", { cache: "no-store" }).then(r => r.json()).then(list => {
+    all = list.sort((a, b) => a.date.localeCompare(b.date) || (a.persona || "").localeCompare(b.persona || ""));
+    filter();
+    const now = new Date(); month = [now.getFullYear(), now.getMonth()];
+    render();
+  }).catch(() => { app.innerHTML = '<p class="empty">Gagal memuat data.</p>'; });
+}
 </script>
 </body>
 </html>
