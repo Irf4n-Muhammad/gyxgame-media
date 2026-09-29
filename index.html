@@ -164,7 +164,9 @@ function shell(inner) {
     ${personas.length > 1 ? `<div class="chips">${["", ...personas].map(x =>
       `<button data-persona="${esc(x)}" class="${x === persona ? "on" : ""}">${x ? esc(x) : "Semua"}</button>`).join("")}</div>` : ""}
     ${inner}`;
-  app.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { tab = b.dataset.tab; render(); });
+  app.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => {
+    tab = b.dataset.tab; history.replaceState(null, "", tab === "cal" ? "#kalender" : location.pathname); render();
+  });
   app.querySelectorAll("[data-persona]").forEach(b => b.onclick = () => { persona = b.dataset.persona; filter(); render(); });
 }
 
@@ -267,7 +269,9 @@ if (params.get("code")) {
   fetch("posts.json", { cache: "no-store" }).then(r => r.json()).then(list => {
     all = list.sort((a, b) => a.date.localeCompare(b.date) || (a.persona || "").localeCompare(b.persona || ""));
     filter();
-    const now = new Date(); month = [now.getFullYear(), now.getMonth()];
+    const focus = posts[idx] ? new Date(posts[idx].date + "T00:00:00") : new Date();
+    month = [focus.getFullYear(), focus.getMonth()];
+    if (location.hash === "#kalender") tab = "cal";
     render();
   }).catch(() => { app.innerHTML = '<p class="empty">Gagal memuat data.</p>'; });
 }
