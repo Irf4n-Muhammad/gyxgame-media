@@ -1,6 +1,8 @@
 {
  "id": "week_2026-09-27_clean/2026-09-30_dark-souls-snow",
  "date": "2026-09-30",
+ "time": "12:00",
+ "persona": "clean",
  "slug": "dark-souls-snow",
  "game": "Dark Souls",
  "key_point": "a stranger's small kindness on a snowy hill became Dark Souls' online system",
@@ -11,5 +13,23 @@
   "week_2026-09-27_clean/2026-09-30_dark-souls-snow/tiktok_2.jpg",
   "week_2026-09-27_clean/2026-09-30_dark-souls-snow/tiktok_3.jpg",
   "week_2026-09-27_clean/2026-09-30_dark-souls-snow/tiktok_4.jpg"
- ]
+ ],
+ "instagram": {
+  "caption": "Dark Souls director Hidetaka Miyazaki once got stuck on a snowy hill. Strangers got out and pushed the cars up, one by one, then drove away before anyone could thank them.\n\nHe never met them again, but he never forgot it.\n\nThat's where Dark Souls' online system came from: messages, bloodstains and summon signs left by players you'll never meet, helping you anyway.\n\nWhat's the best message you ever found?\n\nFollow @gyxgame for the stories behind the games.\n\n#gamefacts #didyouknow #gaming #darksouls #fromsoftware #soulslike",
+  "images": [
+   "week_2026-09-27_clean/2026-09-30_dark-souls-snow/feed_1.jpg",
+   "week_2026-09-27_clean/2026-09-30_dark-souls-snow/feed_2.jpg",
+   "week_2026-09-27_clean/2026-09-30_dark-souls-snow/feed_3.jpg",
+   "week_2026-09-27_clean/2026-09-30_dark-souls-snow/feed_4.jpg"
+  ]
+ },
+ "threads": {
+  "caption": "Dark Souls director Hidetaka Miyazaki once got stuck on a snowy hill. Strangers got out and pushed the cars up, one by one, then drove away before anyone could thank them.\n\nHe never met them again, but he never forgot it.\n\nThat's where Dark Souls' online system came from: messages, bloodstains and summon signs left by players you'll never meet, helping you anyway.\n\nWhat's the best message you ever found?\n\n#darksouls",
+  "images": [
+   "week_2026-09-27_clean/2026-09-30_dark-souls-snow/feed_1.jpg",
+   "week_2026-09-27_clean/2026-09-30_dark-souls-snow/feed_2.jpg",
+   "week_2026-09-27_clean/2026-09-30_dark-souls-snow/feed_3.jpg",
+   "week_2026-09-27_clean/2026-09-30_dark-souls-snow/feed_4.jpg"
+  ]
+ }
 }
