@@ -186,7 +186,9 @@ async function saveFiles(list, type, what) {
   toast(`Menyiapkan ${what}…`);
   try {
     const files = await Promise.all(list.map(async ([src, name]) => new File([await (await fetch(src)).blob()], name, { type })));
-    if (navigator.canShare && navigator.canShare({ files })) { await navigator.share({ files }); return; }
+    // phone: the share sheet has "Save image/video"; on a PC it opens the OS share dialog, so download there instead
+    const phone = matchMedia("(pointer: coarse)").matches;
+    if (phone && navigator.canShare && navigator.canShare({ files })) { await navigator.share({ files }); return; }
     files.forEach(f => {
       const a = document.createElement("a"); a.href = URL.createObjectURL(f); a.download = f.name;
       document.body.appendChild(a); a.click(); a.remove();
