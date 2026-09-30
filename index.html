@@ -92,11 +92,28 @@ header h1 { font-size: 15px; letter-spacing: .08em; margin: 0; color: var(--mute
 .toast.show { opacity: 1; }
 .empty { text-align: center; color: var(--muted); padding: 40px 0; }
 .cell .g { display: none; }
+/* prepare a week: TikTok drafts + scheduled Reels */
+.prep { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.prep .card { margin: 0; }
+.steps { margin: 0; padding-left: 20px; font-size: 14px; }
+.steps li { margin: 2px 0; }
+.head { display: flex; align-items: center; gap: 12px; }
+.head img { width: 54px; height: 72px; object-fit: cover; border-radius: 8px; background: var(--soft); flex: 0 0 auto; }
+.head .t { min-width: 0; }
+.head .t b { display: block; font-size: 17px; }
+.head .t span { font-size: 13px; color: var(--muted); }
+.part { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
+.part .when { font-size: 14px; margin: 0 0 8px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.pair .btn { margin-top: 0; min-height: 46px; font-size: 15px; }
+.reel { width: 42%; aspect-ratio: 9/16; border-radius: 10px; display: block; background: var(--line); margin-top: 12px; }
 /* laptop: calendar left, selected day right */
 @media (min-width: 960px) {
   main { max-width: 1480px; padding: 24px 32px 48px; }
   header h1 { font-size: 17px; }
-  .tabs { display: none; }
+  .tabs { max-width: 420px; }
+  .tabs [data-tab="cal"] { display: none; }
+  .tabs button { cursor: pointer; }
   .split { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(400px, 1fr); gap: 24px; align-items: start; }
   .col-day { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; padding-right: 4px; }
   .grid { gap: 8px; }
@@ -124,14 +141,15 @@ const DAYS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 const MONTHS_LONG = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 const app = document.getElementById("app");
-let all = [], posts = [], idx = 0, tab = "day", persona = "", month = null;
+let all = [], posts = [], idx = 0, tab = "day", persona = "", month = null, week = "";
 
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
   set(k, v) { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} }
 };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const isDone = p => !!store.get("done:" + p.id);
+const flag = (kind, p) => !!store.get(kind + ":" + p.id);  // done = TikTok posted, draft = in TikTok Drafts, reel = Reel scheduled
+const isDone = p => flag("done", p);
 function iso(d) { return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
 const todayISO = () => iso(new Date());
 function toast(msg) {
@@ -149,8 +167,8 @@ async function copy(text) {
 }
 
 /* A post's time is wall-clock time in its own timezone (e.g. 19:00 New York); show it in the viewer's time. */
-function postInstant(p) {
-  const [y, m, d] = p.date.split("-").map(Number), [h, mi] = (p.time || "12:00").split(":").map(Number);
+function postInstant(p, time) {
+  const [y, m, d] = p.date.split("-").map(Number), [h, mi] = (time || p.time || "12:00").split(":").map(Number);
   const tz = p.tz || "America/New_York", guess = Date.UTC(y, m - 1, d, h, mi);
   const offset = t => {
     const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23",
@@ -161,23 +179,30 @@ function postInstant(p) {
   let t = guess - offset(guess);
   return new Date(guess - offset(t));
 }
-const localTime = p => p.at.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
-async function saveImages(p) {
-  toast("Menyiapkan gambar…");
+const clock = d => d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+const localTime = p => clock(p.at);
+const dayLabel = d => `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+async function saveFiles(list, type, what) {
+  toast(`Menyiapkan ${what}…`);
   try {
-    const files = await Promise.all(p.images.map(async (src, i) => {
-      const blob = await (await fetch(src)).blob();
-      return new File([blob], `${p.date}_${p.slug}_${i + 1}.jpg`, { type: "image/jpeg" });
-    }));
+    const files = await Promise.all(list.map(async ([src, name]) => new File([await (await fetch(src)).blob()], name, { type })));
     if (navigator.canShare && navigator.canShare({ files })) { await navigator.share({ files }); return; }
     files.forEach(f => {
       const a = document.createElement("a"); a.href = URL.createObjectURL(f); a.download = f.name;
       document.body.appendChild(a); a.click(); a.remove();
     });
-    toast("Gambar diunduh");
+    toast(what[0].toUpperCase() + what.slice(1) + " diunduh");
   } catch (e) {
-    if (e.name !== "AbortError") toast("Gagal, tekan lama tiap gambar untuk simpan");
+    if (e.name !== "AbortError") toast("Gagal, tekan lama untuk simpan");
   }
+}
+const saveImages = p => saveFiles(p.images.map((src, i) => [src, `${p.date}_${p.slug}_${i + 1}.jpg`]), "image/jpeg", "gambar");
+const saveReel = p => saveFiles([[p.reel.video, `${p.date}_${p.slug}_reel.mp4`]], "video/mp4", "video");
+/* Weeks run Monday to Sunday in the viewer's time. */
+function weekOf(p) {
+  const d = new Date(p.day + "T00:00:00");
+  d.setDate(d.getDate() - (d.getDay() + 6) % 7);
+  return iso(d);
 }
 
 const wide = matchMedia("(min-width: 960px)");
@@ -188,12 +213,13 @@ function shell(inner) {
   app.innerHTML = `
     <header><h1>GYXGAME · POSTING</h1><span class="muted">${count}/${posts.length} TikTok</span></header>
     <div class="tabs"><button data-tab="day" class="${tab === "day" ? "on" : ""}">Hari ini</button>
-      <button data-tab="cal" class="${tab === "cal" ? "on" : ""}">Kalender</button></div>
+      <button data-tab="cal" class="${tab === "cal" ? "on" : ""}">Kalender</button>
+      <button data-tab="prep" class="${tab === "prep" ? "on" : ""}">Siapin</button></div>
     ${personas.length > 1 ? `<div class="chips">${["", ...personas].map(x =>
       `<button data-persona="${esc(x)}" class="${x === persona ? "on" : ""}">${x ? esc(x) : "Semua"}</button>`).join("")}</div>` : ""}
     ${inner}`;
   app.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => {
-    tab = b.dataset.tab; history.replaceState(null, "", tab === "cal" ? "#kalender" : location.pathname); render();
+    tab = b.dataset.tab; history.replaceState(null, "", tab === "cal" ? "#kalender" : tab === "prep" ? "#siapin" : location.pathname); render();
   });
   app.querySelectorAll("[data-persona]").forEach(b => b.onclick = () => { persona = b.dataset.persona; filter(); render(); });
 }
@@ -214,8 +240,8 @@ function dayHTML() {
       <p class="game">${esc(p.game)}</p>
       ${p.key_point ? `<p class="kp">${esc(p.key_point)}</p>` : ""}
       <div class="times">
-        <span>🕖 Posting TikTok sekitar jam <b>${esc(localTime(p))}</b></span>
-        <span class="muted">IG + Threads tayang otomatis di jam yang sama</span>
+        <span>🕖 Posting TikTok dari Drafts sekitar jam <b>${esc(localTime(p))}</b></span>
+        <span class="muted">Carousel IG + Threads tayang otomatis di jam yang sama</span>
       </div>
       <div class="strip">${p.images.map(s => `<a href="${esc(s)}" target="_blank"><img src="${esc(s)}" alt="" loading="lazy"></a>`).join("")}</div>
       <button class="btn" id="save">💾 Simpan ${p.images.length} gambar</button>
@@ -228,7 +254,14 @@ function dayHTML() {
     <div class="card">
       <label class="done ${done ? "on" : ""}"><input type="checkbox" id="done" ${done ? "checked" : ""}> Sudah diposting di TikTok</label>
       <p class="hint">Jangan lupa pilih sound yang lagi trending.</p>
-    </div>`;
+    </div>
+    ${p.reel ? `<div class="card"><p class="label">Reels Instagram</p>
+      <p class="kp">Jadwalkan di app IG: <b>${esc(dayLabel(p.reelAt))} · ${esc(clock(p.reelAt))}</b>, tambah lagu di sana.</p>
+      <video class="reel" src="${esc(p.reel.video)}" poster="${esc(p.images[0])}" preload="none" controls muted playsinline></video>
+      <div class="pair" style="margin-top:12px"><button class="btn" id="saveReel">💾 Video</button>
+        <button class="btn ghost" id="copyReel">📋 Caption</button></div>
+      <label class="done ${flag("reel", p) ? "on" : ""}"><input type="checkbox" id="reelDone" ${flag("reel", p) ? "checked" : ""}> Reels sudah dijadwal</label>
+    </div>` : ""}`;
 }
 
 function bindDay() {
@@ -244,6 +277,66 @@ function bindDay() {
   document.getElementById("copyCap").onclick = () => copy(p.caption);
   const ct = document.getElementById("copyTitle"); if (ct) ct.onclick = () => copy(p.title);
   document.getElementById("done").onchange = e => { store.set("done:" + p.id, e.target.checked ? "1" : ""); render(); };
+  if (p.reel) {
+    document.getElementById("saveReel").onclick = () => saveReel(p);
+    document.getElementById("copyReel").onclick = () => copy(p.reel.caption);
+    document.getElementById("reelDone").onchange = e => { store.set("reel:" + p.id, e.target.checked ? "1" : ""); render(); };
+  }
+}
+
+/* One sitting per week: save every TikTok post to Drafts and schedule every Reel in the Instagram app. */
+function prepHTML() {
+  if (!posts.length) return '<p class="empty">Belum ada postingan.</p>';
+  const keys = [...new Set(posts.map(weekOf))];
+  if (!keys.includes(week)) week = weekOf(posts[idx]);
+  const k = keys.indexOf(week), list = posts.filter(p => weekOf(p) === week);
+  const a = new Date(week + "T00:00:00"), b = new Date(a); b.setDate(a.getDate() + 6);
+  const range = a.getMonth() === b.getMonth() ? `${a.getDate()} – ${b.getDate()} ${MONTHS[b.getMonth()]}`
+    : `${a.getDate()} ${MONTHS[a.getMonth()]} – ${b.getDate()} ${MONTHS[b.getMonth()]}`;
+  const reels = list.filter(p => p.reel);
+  const cards = list.map(p => {
+    const i = posts.indexOf(p), draft = flag("draft", p), reel = flag("reel", p);
+    return `<div class="card">
+      <div class="head"><img src="${esc(p.images[0])}" alt="" loading="lazy">
+        <span class="t"><b>${esc(dayLabel(p.at))}</b><span>${esc(p.game)}${p.persona && p.persona !== "clean" ? " · " + esc(p.persona) : ""}</span></span></div>
+      <div class="part"><p class="label">TikTok</p>
+        <p class="when">Simpan ke Drafts, post jam <b>${esc(localTime(p))}</b></p>
+        <div class="pair"><button class="btn" data-act="imgs" data-i="${i}">💾 ${p.images.length} foto</button>
+          <button class="btn ghost" data-act="cap" data-i="${i}">📋 Caption</button></div>
+        <label class="done ${draft ? "on" : ""}"><input type="checkbox" data-flag="draft" data-i="${i}" ${draft ? "checked" : ""}> Sudah di Drafts</label></div>
+      ${p.reel ? `<div class="part"><p class="label">Reels Instagram</p>
+        <p class="when">Jadwalkan <b>${esc(dayLabel(p.reelAt))} · ${esc(clock(p.reelAt))}</b></p>
+        <div class="pair"><button class="btn" data-act="vid" data-i="${i}">💾 Video</button>
+          <button class="btn ghost" data-act="rcap" data-i="${i}">📋 Caption</button></div>
+        <label class="done ${reel ? "on" : ""}"><input type="checkbox" data-flag="reel" data-i="${i}" ${reel ? "checked" : ""}> Sudah dijadwal</label></div>` : ""}
+    </div>`;
+  }).join("");
+  return `
+    <div class="nav">
+      <button id="pw" aria-label="Minggu sebelumnya" ${k === 0 ? "disabled" : ""}>‹</button>
+      <div class="day"><b>${range}</b><span>Drafts TikTok ${list.filter(p => flag("draft", p)).length}/${list.length}${reels.length
+        ? ` · Reels ${reels.filter(p => flag("reel", p)).length}/${reels.length}` : ""}</span></div>
+      <button id="nw" aria-label="Minggu berikutnya" ${k === keys.length - 1 ? "disabled" : ""}>›</button>
+    </div>
+    <div class="card"><ol class="steps">
+      <li><b>TikTok:</b> simpan foto, buat post, pilih sound, tempel caption, lalu <b>Simpan ke Drafts</b>.</li>
+      <li><b>Reels:</b> simpan video, buat Reels, pilih lagu, tempel caption, lalu <b>Jadwalkan</b> di jam yang tertulis.</li>
+      <li>Tiap pagi tinggal tekan Post di Drafts TikTok.</li></ol></div>
+    <div class="prep">${cards}</div>`;
+}
+
+function bindPrep() {
+  const pw = document.getElementById("pw");
+  if (!pw) return;
+  const keys = [...new Set(posts.map(weekOf))], k = keys.indexOf(week);
+  const go = i => { week = keys[i]; render(); scrollTo(0, 0); };
+  pw.onclick = () => k > 0 && go(k - 1);
+  document.getElementById("nw").onclick = () => k < keys.length - 1 && go(k + 1);
+  const acts = { imgs: saveImages, cap: p => copy(p.caption), vid: saveReel, rcap: p => copy(p.reel.caption) };
+  app.querySelectorAll("[data-act]").forEach(b => b.onclick = () => acts[b.dataset.act](posts[+b.dataset.i]));
+  app.querySelectorAll("[data-flag]").forEach(c => c.onchange = () => {
+    store.set(c.dataset.flag + ":" + posts[+c.dataset.i].id, c.checked ? "1" : ""); render();
+  });
 }
 
 function calHTML() {
@@ -293,7 +386,8 @@ function bindCal() {
 
 /* Phone: one view with tabs. Laptop: calendar and the selected day side by side. */
 function render() {
-  if (wide.matches) {
+  if (tab === "prep") { shell(prepHTML()); bindPrep(); }
+  else if (wide.matches) {
     shell(`<div class="split"><section class="col-cal">${calHTML()}</section><section class="col-day">${dayHTML()}</section></div>`);
     bindCal(); bindDay();
   } else if (tab === "cal") { shell(calHTML()); bindCal(); }
@@ -321,12 +415,16 @@ if (params.get("code")) {
   history.replaceState(null, "", location.pathname);
 } else {
   fetch("posts.json", { cache: "no-store" }).then(r => r.json()).then(list => {
-    list.forEach(p => { p.at = postInstant(p); p.day = iso(p.at); });  // when and on which local day it goes out
+    list.forEach(p => {  // when and on which local day it goes out
+      p.at = postInstant(p); p.day = iso(p.at);
+      if (p.reel) p.reelAt = postInstant(p, p.reel.time);
+    });
     all = list.sort((a, b) => a.at - b.at || (a.persona || "").localeCompare(b.persona || ""));
     filter();
     const focus = posts[idx] ? posts[idx].at : new Date();
     month = [focus.getFullYear(), focus.getMonth()];
     if (location.hash === "#kalender") tab = "cal";
+    if (location.hash === "#siapin") tab = "prep";
     render();
   }).catch(() => { app.innerHTML = '<p class="empty">Gagal memuat data.</p>'; });
 }
