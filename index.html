@@ -189,10 +189,14 @@ async function saveFiles(list, type, what) {
     // phone: the share sheet has "Save image/video"; on a PC it opens the OS share dialog, so download there instead
     const phone = matchMedia("(pointer: coarse)").matches;
     if (phone && navigator.canShare && navigator.canShare({ files })) { await navigator.share({ files }); return; }
-    files.forEach(f => {
-      const a = document.createElement("a"); a.href = URL.createObjectURL(f); a.download = f.name;
+    // browsers drop downloads fired in the same instant, so start them one by one
+    for (const f of files) {
+      const a = document.createElement("a"), url = URL.createObjectURL(f);
+      a.href = url; a.download = f.name;
       document.body.appendChild(a); a.click(); a.remove();
-    });
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      await new Promise(r => setTimeout(r, 700));
+    }
     toast(what[0].toUpperCase() + what.slice(1) + " diunduh");
   } catch (e) {
     if (e.name !== "AbortError") toast("Gagal, tekan lama untuk simpan");
