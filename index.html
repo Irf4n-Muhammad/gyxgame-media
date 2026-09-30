@@ -87,6 +87,8 @@ header h1 { font-size: 15px; letter-spacing: .08em; margin: 0; color: var(--mute
 .agenda .st.ok { color: var(--ok); }
 .code { font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; word-break: break-all; background: var(--soft);
   padding: 10px; border-radius: 10px; margin: 8px 0 0; }
+.linkbtn { all: unset; cursor: pointer; color: var(--text); font-weight: 600; }
+.linkbtn:hover { text-decoration: underline; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--text); color: var(--bg);
   padding: 10px 16px; border-radius: 999px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
 .toast.show { opacity: 1; }
@@ -141,7 +143,7 @@ const DAYS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 const MONTHS_LONG = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 const app = document.getElementById("app");
-let all = [], posts = [], idx = 0, tab = "day", persona = "", month = null, week = "";
+let all = [], posts = [], idx = 0, tab = "day", persona = "", month = null, week = "", folderName = "";
 
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -202,16 +204,65 @@ async function saveFiles(list, type, what) {
   }
 }
 const isPhone = () => matchMedia("(pointer: coarse)").matches;
-function saveImages(p) {
-  if (!isPhone() && p.zip) {  // PC: several downloads from one click get dropped, one zip never does
-    const a = document.createElement("a"); a.href = p.zip; a.download = p.zip.split("/").pop();
-    document.body.appendChild(a); a.click(); a.remove();
-    toast("ZIP diunduh (4 foto)");
-    return;
-  }
-  return saveFiles(p.images.map((src, i) => [src, `${p.date}_${p.slug}_${i + 1}.jpg`]), "image/jpeg", "gambar");
+
+/* PC (Chrome/Edge): write the files straight into a folder the viewer picks once. The folder is remembered in
+   IndexedDB; the browser may ask again for permission in a new session. */
+const canFolder = () => !isPhone() && "showDirectoryPicker" in window;
+const folderDB = () => new Promise((res, rej) => {
+  const r = indexedDB.open("gyxgame", 1);
+  r.onupgradeneeded = () => r.result.createObjectStore("kv");
+  r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+});
+async function savedFolder() {
+  try {
+    const db = await folderDB();
+    return await new Promise(res => {
+      const q = db.transaction("kv").objectStore("kv").get("dir");
+      q.onsuccess = () => res(q.result || null); q.onerror = () => res(null);
+    });
+  } catch (e) { return null; }
 }
-const saveReel = p => saveFiles([[p.reel.video, `${p.date}_${p.slug}_reel.mp4`]], "video/mp4", "video");
+async function rememberFolder(dir) {
+  try { (await folderDB()).transaction("kv", "readwrite").objectStore("kv").put(dir, "dir"); } catch (e) {}
+}
+async function pickFolder(fresh) {
+  let dir = fresh ? null : await savedFolder();
+  if (dir) {
+    const ok = (await dir.queryPermission({ mode: "readwrite" })) === "granted" ||
+               (await dir.requestPermission({ mode: "readwrite" })) === "granted";
+    if (!ok) dir = null;
+  }
+  if (!dir) {
+    dir = await showDirectoryPicker({ id: "gyxgame", mode: "readwrite", startIn: "pictures" });
+    await rememberFolder(dir);
+    folderName = dir.name; render();  // header shows the folder name
+  }
+  return dir;
+}
+async function saveToFolder(list, what) {
+  const dir = await pickFolder();
+  toast(`Menyimpan ${what}…`);
+  for (const [src, name] of list) {
+    const blob = await (await fetch(src)).blob();
+    const w = await (await dir.getFileHandle(name, { create: true })).createWritable();
+    await w.write(blob); await w.close();
+  }
+  toast(`${list.length} file tersimpan di folder ${dir.name}`);
+}
+async function saveList(list, type, what, zip) {
+  if (canFolder()) {
+    try { return await saveToFolder(list, what); }
+    catch (e) { if (e.name === "AbortError") return; }  // otherwise fall back below
+  }
+  if (!isPhone() && zip) {  // PC without folder access: several downloads from one click get dropped, one zip never does
+    const a = document.createElement("a"); a.href = zip; a.download = zip.split("/").pop();
+    document.body.appendChild(a); a.click(); a.remove();
+    return toast(`ZIP diunduh (${list.length} foto)`);
+  }
+  return saveFiles(list, type, what);
+}
+const saveImages = p => saveList(p.images.map((src, i) => [src, `${p.date}_${p.slug}_${i + 1}.jpg`]), "image/jpeg", "gambar", p.zip);
+const saveReel = p => saveList([[p.reel.video, `${p.date}_${p.slug}_reel.mp4`]], "video/mp4", "video");
 /* Weeks run Monday to Sunday in the viewer's time. */
 function weekOf(p) {
   const d = new Date(p.day + "T00:00:00");
@@ -225,7 +276,8 @@ function shell(inner) {
   const personas = [...new Set(all.map(p => p.persona || "clean"))];
   const count = posts.filter(isDone).length;
   app.innerHTML = `
-    <header><h1>GYXGAME · POSTING</h1><span class="muted">${count}/${posts.length} TikTok</span></header>
+    <header><h1>GYXGAME · POSTING</h1><span class="muted">${canFolder()
+      ? `<button class="linkbtn" id="folder">📁 ${folderName ? "Folder: " + esc(folderName) + " · ganti" : "Pilih folder simpan"}</button> · ` : ""}${count}/${posts.length} TikTok</span></header>
     <div class="tabs"><button data-tab="day" class="${tab === "day" ? "on" : ""}">Hari ini</button>
       <button data-tab="cal" class="${tab === "cal" ? "on" : ""}">Kalender</button>
       <button data-tab="prep" class="${tab === "prep" ? "on" : ""}">Siapin</button></div>
@@ -236,6 +288,8 @@ function shell(inner) {
     tab = b.dataset.tab; history.replaceState(null, "", tab === "cal" ? "#kalender" : tab === "prep" ? "#siapin" : location.pathname); render();
   });
   app.querySelectorAll("[data-persona]").forEach(b => b.onclick = () => { persona = b.dataset.persona; filter(); render(); });
+  const fb = document.getElementById("folder");
+  if (fb) fb.onclick = () => pickFolder(true).then(d => toast("Foto dan video disimpan ke " + d.name)).catch(() => {});
 }
 
 function dayHTML() {
@@ -259,7 +313,7 @@ function dayHTML() {
       </div>
       <div class="strip">${p.images.map((s, i) => `<a href="${esc(s)}" target="_blank"${isPhone() ? "" : ` download="${esc(p.date + "_" + p.slug + "_" + (i + 1))}.jpg"`}><img src="${esc(s)}" alt="" loading="lazy"></a>`).join("")}</div>
       <button class="btn" id="save">💾 Simpan ${p.images.length} gambar</button>
-      <p class="hint">${isPhone() ? 'Pilih "Simpan gambar" di menu share. Kalau nggak muncul, tekan lama tiap gambar.' : "Di PC keempat foto diunduh sebagai satu file ZIP. Klik satu gambar untuk mengunduhnya sendiri."}</p>
+      <p class="hint">${isPhone() ? 'Pilih "Simpan gambar" di menu share. Kalau nggak muncul, tekan lama tiap gambar.' : (canFolder() ? "Di PC keempat foto langsung disimpan ke folder pilihan lu." : "Di PC keempat foto diunduh sebagai satu file ZIP.") + " Klik satu gambar untuk mengunduhnya sendiri."}</p>
     </div>
     ${p.title ? `<div class="card"><p class="label">Judul (maks 90)</p><p class="text">${esc(p.title)}</p>
       <button class="btn ghost" id="copyTitle">📋 Copy judul</button></div>` : ""}
@@ -440,6 +494,7 @@ if (params.get("code")) {
     if (location.hash === "#kalender") tab = "cal";
     if (location.hash === "#siapin") tab = "prep";
     render();
+    if (canFolder()) savedFolder().then(d => { if (d) { folderName = d.name; render(); } });
   }).catch(() => { app.innerHTML = '<p class="empty">Gagal memuat data.</p>'; });
 }
 </script>
