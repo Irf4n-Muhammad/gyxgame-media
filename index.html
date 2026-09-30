@@ -335,6 +335,7 @@ function dayHTML() {
       <div class="pair" style="margin-top:12px"><button class="btn" id="saveReel">💾 Video</button>
         <button class="btn ghost" id="copyReel">📋 Caption</button></div>
       <label class="done ${flag("reel", p) ? "on" : ""}"><input type="checkbox" id="reelDone" ${flag("reel", p) ? "checked" : ""}> Reels sudah dijadwal</label>
+      <p class="hint">Setelah tayang: buka Reels-nya, ⋯ → Remove from profile grid (isinya sama dengan carousel).</p>
     </div>` : ""}`;
 }
 
@@ -395,7 +396,8 @@ function prepHTML() {
     <div class="card"><ol class="steps">
       <li><b>TikTok:</b> simpan foto, buat post, pilih sound, tempel caption, lalu <b>Simpan ke Drafts</b>.</li>
       <li><b>Reels:</b> simpan video, buat Reels, pilih lagu, tempel caption, lalu <b>Jadwalkan</b> di jam yang tertulis.</li>
-      <li>Tiap pagi tinggal tekan Post di Drafts TikTok.</li></ol></div>
+      <li>Tiap pagi tinggal tekan Post di Drafts TikTok.</li>
+      <li>Setelah Reels tayang: buka Reels itu, <b>⋯ → Remove from profile grid</b>, supaya grid cuma berisi carousel.</li></ol></div>
     <div class="prep">${cards}</div>`;
 }
 
