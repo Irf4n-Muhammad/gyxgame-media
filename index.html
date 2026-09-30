@@ -87,8 +87,10 @@ header h1 { font-size: 15px; letter-spacing: .08em; margin: 0; color: var(--mute
 .agenda .st.ok { color: var(--ok); }
 .code { font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; word-break: break-all; background: var(--soft);
   padding: 10px; border-radius: 10px; margin: 8px 0 0; }
-.linkbtn { all: unset; cursor: pointer; color: var(--text); font-weight: 600; }
-.linkbtn:hover { text-decoration: underline; }
+.head-right { display: flex; align-items: center; gap: 10px; }
+.pill { min-height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card);
+  color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer; }
+.pill:hover { border-color: var(--text); }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--text); color: var(--bg);
   padding: 10px 16px; border-radius: 999px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
 .toast.show { opacity: 1; }
@@ -203,7 +205,8 @@ async function saveFiles(list, type, what) {
     if (e.name !== "AbortError") toast("Gagal, tekan lama untuk simpan");
   }
 }
-const isPhone = () => matchMedia("(pointer: coarse)").matches;
+const isPhone = () => (navigator.userAgentData && navigator.userAgentData.mobile) ||
+  /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
 /* PC (Chrome/Edge): write the files straight into a folder the viewer picks once. The folder is remembered in
    IndexedDB; the browser may ask again for permission in a new session. */
@@ -276,8 +279,9 @@ function shell(inner) {
   const personas = [...new Set(all.map(p => p.persona || "clean"))];
   const count = posts.filter(isDone).length;
   app.innerHTML = `
-    <header><h1>GYXGAME · POSTING</h1><span class="muted">${canFolder()
-      ? `<button class="linkbtn" id="folder">📁 ${folderName ? "Folder: " + esc(folderName) + " · ganti" : "Pilih folder simpan"}</button> · ` : ""}${count}/${posts.length} TikTok</span></header>
+    <header><h1>GYXGAME · POSTING</h1><span class="head-right">${isPhone() ? ""
+      : `<button class="pill" id="folder">📁 ${folderName ? "Folder: " + esc(folderName) + " · ganti" : "Pilih folder simpan"}</button>`}
+      <span class="muted">${count}/${posts.length} TikTok</span></span></header>
     <div class="tabs"><button data-tab="day" class="${tab === "day" ? "on" : ""}">Hari ini</button>
       <button data-tab="cal" class="${tab === "cal" ? "on" : ""}">Kalender</button>
       <button data-tab="prep" class="${tab === "prep" ? "on" : ""}">Siapin</button></div>
@@ -289,7 +293,9 @@ function shell(inner) {
   });
   app.querySelectorAll("[data-persona]").forEach(b => b.onclick = () => { persona = b.dataset.persona; filter(); render(); });
   const fb = document.getElementById("folder");
-  if (fb) fb.onclick = () => pickFolder(true).then(d => toast("Foto dan video disimpan ke " + d.name)).catch(() => {});
+  if (fb) fb.onclick = () => canFolder()
+    ? pickFolder(true).then(d => toast("Foto dan video disimpan ke " + d.name)).catch(() => {})
+    : toast("Browser ini nggak bisa simpan ke folder. Pakai Chrome atau Edge; di sini foto diunduh sebagai ZIP.");
 }
 
 function dayHTML() {
