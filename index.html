@@ -187,8 +187,7 @@ async function saveFiles(list, type, what) {
   try {
     const files = await Promise.all(list.map(async ([src, name]) => new File([await (await fetch(src)).blob()], name, { type })));
     // phone: the share sheet has "Save image/video"; on a PC it opens the OS share dialog, so download there instead
-    const phone = matchMedia("(pointer: coarse)").matches;
-    if (phone && navigator.canShare && navigator.canShare({ files })) { await navigator.share({ files }); return; }
+    if (isPhone() && navigator.canShare && navigator.canShare({ files })) { await navigator.share({ files }); return; }
     // browsers drop downloads fired in the same instant, so start them one by one
     for (const f of files) {
       const a = document.createElement("a"), url = URL.createObjectURL(f);
@@ -202,7 +201,16 @@ async function saveFiles(list, type, what) {
     if (e.name !== "AbortError") toast("Gagal, tekan lama untuk simpan");
   }
 }
-const saveImages = p => saveFiles(p.images.map((src, i) => [src, `${p.date}_${p.slug}_${i + 1}.jpg`]), "image/jpeg", "gambar");
+const isPhone = () => matchMedia("(pointer: coarse)").matches;
+function saveImages(p) {
+  if (!isPhone() && p.zip) {  // PC: several downloads from one click get dropped, one zip never does
+    const a = document.createElement("a"); a.href = p.zip; a.download = p.zip.split("/").pop();
+    document.body.appendChild(a); a.click(); a.remove();
+    toast("ZIP diunduh (4 foto)");
+    return;
+  }
+  return saveFiles(p.images.map((src, i) => [src, `${p.date}_${p.slug}_${i + 1}.jpg`]), "image/jpeg", "gambar");
+}
 const saveReel = p => saveFiles([[p.reel.video, `${p.date}_${p.slug}_reel.mp4`]], "video/mp4", "video");
 /* Weeks run Monday to Sunday in the viewer's time. */
 function weekOf(p) {
@@ -249,9 +257,9 @@ function dayHTML() {
         <span>🕖 Posting TikTok dari Drafts sekitar jam <b>${esc(localTime(p))}</b></span>
         <span class="muted">Carousel IG + Threads tayang otomatis di jam yang sama</span>
       </div>
-      <div class="strip">${p.images.map(s => `<a href="${esc(s)}" target="_blank"><img src="${esc(s)}" alt="" loading="lazy"></a>`).join("")}</div>
+      <div class="strip">${p.images.map((s, i) => `<a href="${esc(s)}" target="_blank"${isPhone() ? "" : ` download="${esc(p.date + "_" + p.slug + "_" + (i + 1))}.jpg"`}><img src="${esc(s)}" alt="" loading="lazy"></a>`).join("")}</div>
       <button class="btn" id="save">💾 Simpan ${p.images.length} gambar</button>
-      <p class="hint">Pilih "Simpan gambar" di menu share. Kalau nggak muncul, tekan lama tiap gambar.</p>
+      <p class="hint">${isPhone() ? 'Pilih "Simpan gambar" di menu share. Kalau nggak muncul, tekan lama tiap gambar.' : "Di PC keempat foto diunduh sebagai satu file ZIP. Klik satu gambar untuk mengunduhnya sendiri."}</p>
     </div>
     ${p.title ? `<div class="card"><p class="label">Judul (maks 90)</p><p class="text">${esc(p.title)}</p>
       <button class="btn ghost" id="copyTitle">📋 Copy judul</button></div>` : ""}
