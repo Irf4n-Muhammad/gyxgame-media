@@ -96,7 +96,7 @@ header h1 { font-size: 15px; letter-spacing: .08em; margin: 0; color: var(--mute
 .toast.show { opacity: 1; }
 .empty { text-align: center; color: var(--muted); padding: 40px 0; }
 .cell .g { display: none; }
-/* prepare a week: TikTok drafts + scheduled Reels */
+/* prepare a week: TikTok drafts */
 .prep { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
 .prep .card { margin: 0; }
 .steps { margin: 0; padding-left: 20px; font-size: 14px; }
@@ -152,7 +152,7 @@ const store = {
   set(k, v) { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} }
 };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const flag = (kind, p) => !!store.get(kind + ":" + p.id);  // done = TikTok posted, draft = in TikTok Drafts, reel = Reel scheduled
+const flag = (kind, p) => !!store.get(kind + ":" + p.id);  // done = TikTok posted, draft = in TikTok Drafts
 const isDone = p => flag("done", p);
 function iso(d) { return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
 const todayISO = () => iso(new Date());
@@ -315,7 +315,7 @@ function dayHTML() {
       ${p.key_point ? `<p class="kp">${esc(p.key_point)}</p>` : ""}
       <div class="times">
         <span>🕖 Posting TikTok dari Drafts sekitar jam <b>${esc(localTime(p))}</b></span>
-        <span class="muted">Carousel IG + Threads tayang otomatis di jam yang sama</span>
+        <span class="muted">Carousel IG + Threads tayang otomatis di jam yang sama${p.reel ? `, Reels jam ${esc(clock(p.reelAt))}` : ""}</span>
       </div>
       <div class="strip">${p.images.map((s, i) => `<a href="${esc(s)}" target="_blank"${isPhone() ? "" : ` download="${esc(p.date + "_" + p.slug + "_" + (i + 1))}.jpg"`}><img src="${esc(s)}" alt="" loading="lazy"></a>`).join("")}</div>
       <button class="btn" id="save">💾 Simpan ${p.images.length} gambar</button>
@@ -329,13 +329,10 @@ function dayHTML() {
       <label class="done ${done ? "on" : ""}"><input type="checkbox" id="done" ${done ? "checked" : ""}> Sudah diposting di TikTok</label>
       <p class="hint">Jangan lupa pilih sound yang lagi trending.</p>
     </div>
-    ${p.reel ? `<div class="card"><p class="label">Reels Instagram</p>
-      <p class="kp">Jadwalkan di app IG: <b>${esc(dayLabel(p.reelAt))} · ${esc(clock(p.reelAt))}</b>, tambah lagu di sana.</p>
-      <video class="reel" src="${esc(p.reel.video)}" poster="${esc(p.images[0])}" preload="none" controls muted playsinline></video>
-      <div class="pair" style="margin-top:12px"><button class="btn" id="saveReel">💾 Video</button>
-        <button class="btn ghost" id="copyReel">📋 Caption</button></div>
-      <label class="done ${flag("reel", p) ? "on" : ""}"><input type="checkbox" id="reelDone" ${flag("reel", p) ? "checked" : ""}> Reels sudah dijadwal</label>
-      <p class="hint">Setelah tayang: buka Reels-nya, ⋯ → Remove from profile grid (isinya sama dengan carousel).</p>
+    ${p.reel ? `<div class="card"><p class="label">Reels Instagram · otomatis</p>
+      <p class="kp">Tayang sendiri <b>${esc(dayLabel(p.reelAt))} · ${esc(clock(p.reelAt))}</b>, cuma di tab Reels (nggak muncul di grid). Nggak perlu diapa-apain.</p>
+      <video class="reel" src="${esc(p.reel.video)}" poster="${esc(p.images[0])}" preload="none" controls playsinline></video>
+      <button class="btn ghost" id="saveReel">💾 Simpan video</button>
     </div>` : ""}`;
 }
 
@@ -352,14 +349,10 @@ function bindDay() {
   document.getElementById("copyCap").onclick = () => copy(p.caption);
   const ct = document.getElementById("copyTitle"); if (ct) ct.onclick = () => copy(p.title);
   document.getElementById("done").onchange = e => { store.set("done:" + p.id, e.target.checked ? "1" : ""); render(); };
-  if (p.reel) {
-    document.getElementById("saveReel").onclick = () => saveReel(p);
-    document.getElementById("copyReel").onclick = () => copy(p.reel.caption);
-    document.getElementById("reelDone").onchange = e => { store.set("reel:" + p.id, e.target.checked ? "1" : ""); render(); };
-  }
+  if (p.reel) document.getElementById("saveReel").onclick = () => saveReel(p);
 }
 
-/* One sitting per week: save every TikTok post to Drafts and schedule every Reel in the Instagram app. */
+/* One sitting per week: save every TikTok post to Drafts. Instagram (carousel + Reels) and Threads post themselves. */
 function prepHTML() {
   if (!posts.length) return '<p class="empty">Belum ada postingan.</p>';
   const keys = [...new Set(posts.map(weekOf))];
@@ -368,9 +361,8 @@ function prepHTML() {
   const a = new Date(week + "T00:00:00"), b = new Date(a); b.setDate(a.getDate() + 6);
   const range = a.getMonth() === b.getMonth() ? `${a.getDate()} – ${b.getDate()} ${MONTHS[b.getMonth()]}`
     : `${a.getDate()} ${MONTHS[a.getMonth()]} – ${b.getDate()} ${MONTHS[b.getMonth()]}`;
-  const reels = list.filter(p => p.reel);
   const cards = list.map(p => {
-    const i = posts.indexOf(p), draft = flag("draft", p), reel = flag("reel", p);
+    const i = posts.indexOf(p), draft = flag("draft", p);
     return `<div class="card">
       <div class="head"><img src="${esc(p.images[0])}" alt="" loading="lazy">
         <span class="t"><b>${esc(dayLabel(p.at))}</b><span>${esc(p.game)}${p.persona && p.persona !== "clean" ? " · " + esc(p.persona) : ""}</span></span></div>
@@ -379,25 +371,18 @@ function prepHTML() {
         <div class="pair"><button class="btn" data-act="imgs" data-i="${i}">💾 ${p.images.length} foto</button>
           <button class="btn ghost" data-act="cap" data-i="${i}">📋 Caption</button></div>
         <label class="done ${draft ? "on" : ""}"><input type="checkbox" data-flag="draft" data-i="${i}" ${draft ? "checked" : ""}> Sudah di Drafts</label></div>
-      ${p.reel ? `<div class="part"><p class="label">Reels Instagram</p>
-        <p class="when">Jadwalkan <b>${esc(dayLabel(p.reelAt))} · ${esc(clock(p.reelAt))}</b></p>
-        <div class="pair"><button class="btn" data-act="vid" data-i="${i}">💾 Video</button>
-          <button class="btn ghost" data-act="rcap" data-i="${i}">📋 Caption</button></div>
-        <label class="done ${reel ? "on" : ""}"><input type="checkbox" data-flag="reel" data-i="${i}" ${reel ? "checked" : ""}> Sudah dijadwal</label></div>` : ""}
     </div>`;
   }).join("");
   return `
     <div class="nav">
       <button id="pw" aria-label="Minggu sebelumnya" ${k === 0 ? "disabled" : ""}>‹</button>
-      <div class="day"><b>${range}</b><span>Drafts TikTok ${list.filter(p => flag("draft", p)).length}/${list.length}${reels.length
-        ? ` · Reels ${reels.filter(p => flag("reel", p)).length}/${reels.length}` : ""}</span></div>
+      <div class="day"><b>${range}</b><span>Drafts TikTok ${list.filter(p => flag("draft", p)).length}/${list.length}</span></div>
       <button id="nw" aria-label="Minggu berikutnya" ${k === keys.length - 1 ? "disabled" : ""}>›</button>
     </div>
     <div class="card"><ol class="steps">
       <li><b>TikTok:</b> simpan foto, buat post, pilih sound, tempel caption, lalu <b>Simpan ke Drafts</b>.</li>
-      <li><b>Reels:</b> simpan video, buat Reels, pilih lagu, tempel caption, lalu <b>Jadwalkan</b> di jam yang tertulis.</li>
       <li>Tiap pagi tinggal tekan Post di Drafts TikTok.</li>
-      <li>Setelah Reels tayang: buka Reels itu, <b>⋯ → Remove from profile grid</b>, supaya grid cuma berisi carousel.</li></ol></div>
+      <li>Instagram (carousel + Reels) dan Threads tayang otomatis, nggak perlu diapa-apain.</li></ol></div>
     <div class="prep">${cards}</div>`;
 }
 
@@ -408,7 +393,7 @@ function bindPrep() {
   const go = i => { week = keys[i]; render(); scrollTo(0, 0); };
   pw.onclick = () => k > 0 && go(k - 1);
   document.getElementById("nw").onclick = () => k < keys.length - 1 && go(k + 1);
-  const acts = { imgs: saveImages, cap: p => copy(p.caption), vid: saveReel, rcap: p => copy(p.reel.caption) };
+  const acts = { imgs: saveImages, cap: p => copy(p.caption) };
   app.querySelectorAll("[data-act]").forEach(b => b.onclick = () => acts[b.dataset.act](posts[+b.dataset.i]));
   app.querySelectorAll("[data-flag]").forEach(c => c.onchange = () => {
     store.set(c.dataset.flag + ":" + posts[+c.dataset.i].id, c.checked ? "1" : ""); render();
