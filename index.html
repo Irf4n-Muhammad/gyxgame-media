@@ -94,6 +94,7 @@ header h1 { font-size: 15px; letter-spacing: .08em; margin: 0; color: var(--mute
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--text); color: var(--bg);
   padding: 10px 16px; border-radius: 999px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
 .toast.show { opacity: 1; }
+.toast.act { pointer-events: auto; cursor: pointer; font-weight: 700; padding: 14px 22px; }
 .empty { text-align: center; color: var(--muted); padding: 40px 0; }
 .cell .g { display: none; }
 /* prepare a week: TikTok drafts */
@@ -158,8 +159,15 @@ function iso(d) { return new Date(d.getTime() - d.getTimezoneOffset() * 60000).t
 const todayISO = () => iso(new Date());
 function toast(msg) {
   const t = document.getElementById("toast");
-  t.textContent = msg; t.classList.add("show");
+  t.textContent = msg; t.classList.add("show"); t.classList.remove("act"); t.onclick = null;
   clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), 1800);
+}
+/* A toast the viewer taps to continue: the share sheet only opens straight after a tap. */
+function tapToast(msg, fn) {
+  const t = document.getElementById("toast");
+  t.textContent = "👉 " + msg; t.classList.add("show", "act");
+  t.onclick = () => { t.onclick = null; t.classList.remove("show", "act"); fn(); };
+  clearTimeout(toast.h); toast.h = setTimeout(() => { t.onclick = null; t.classList.remove("show", "act"); }, 30000);
 }
 async function copy(text) {
   try { await navigator.clipboard.writeText(text); }
@@ -186,12 +194,44 @@ function postInstant(p, time) {
 const clock = d => d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 const localTime = p => clock(p.at);
 const dayLabel = d => `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+/* Files are fetched once and kept, so a second tap (or a tap after the post was opened) shares at once. */
+const fileCache = new Map();
+function getFile(src, name, type) {
+  if (!fileCache.has(src)) fileCache.set(src, fetch(src).then(r => {
+    if (!r.ok) throw new Error(r.status);
+    return r.blob();
+  }).then(b => new File([b], name, { type })).catch(e => { fileCache.delete(src); throw e; }));
+  return fileCache.get(src);
+}
+/* Phone share sheet: Chrome on Android takes at most 10 files per share, and every browser only opens the sheet
+   shortly after a tap. So share in batches of 10, and when the tap has expired (slow download, next batch) ask for
+   one more tap. */
+const SHARE_MAX = 10;
+function shareBatches(files, what, i = 0) {
+  const size = Math.ceil(files.length / Math.ceil(files.length / SHARE_MAX));  // even batches: 11 -> 6 + 5
+  const batch = files.slice(i, i + size), multi = files.length > SHARE_MAX;
+  const label = multi ? `foto ${i + 1}-${i + batch.length} dari ${files.length}` : what;
+  const run = async () => {
+    try { await navigator.share({ files: batch }); }
+    catch (e) {
+      if (e.name === "AbortError") return;
+      if (e.name === "NotAllowedError") return tapToast(`Tap buat simpan ${label}`, run);
+      return toast("Gagal, tekan lama tiap gambar untuk simpan");
+    }
+    if (i + size < files.length) {
+      const next = files.length - i - size;
+      tapToast(`Tap buat simpan ${next} foto sisanya`, () => shareBatches(files, what, i + size));
+    }
+  };
+  if (navigator.userActivation && !navigator.userActivation.isActive) return tapToast(`Siap. Tap buat simpan ${label}`, run);
+  return run();
+}
 async function saveFiles(list, type, what) {
   toast(`Menyiapkan ${what}…`);
   try {
-    const files = await Promise.all(list.map(async ([src, name]) => new File([await (await fetch(src)).blob()], name, { type })));
+    const files = await Promise.all(list.map(([src, name]) => getFile(src, name, type)));
     // phone: the share sheet has "Save image/video"; on a PC it opens the OS share dialog, so download there instead
-    if (isPhone() && navigator.canShare && navigator.canShare({ files })) { await navigator.share({ files }); return; }
+    if (isPhone() && navigator.canShare && navigator.canShare({ files: files.slice(0, SHARE_MAX) })) return shareBatches(files, what);
     // browsers drop downloads fired in the same instant, so start them one by one
     for (const f of files) {
       const a = document.createElement("a"), url = URL.createObjectURL(f);
@@ -264,7 +304,8 @@ async function saveList(list, type, what, zip) {
   }
   return saveFiles(list, type, what);
 }
-const saveImages = p => saveList(p.images.map((src, i) => [src, `${p.date}_${p.slug}_${i + 1}.jpg`]), "image/jpeg", "gambar", p.zip);
+const imageList = p => p.images.map((src, i) => [src, `${p.date}_${p.slug}_${i + 1}.jpg`]);
+const saveImages = p => saveList(imageList(p), "image/jpeg", "gambar", p.zip);
 const saveReel = p => saveList([[p.reel.video, `${p.date}_${p.slug}_reel.mp4`]], "video/mp4", "video");
 /* Weeks run Monday to Sunday in the viewer's time. */
 function weekOf(p) {
@@ -319,7 +360,7 @@ function dayHTML() {
       </div>
       <div class="strip">${p.images.map((s, i) => `<a href="${esc(s)}" target="_blank"${isPhone() ? "" : ` download="${esc(p.date + "_" + p.slug + "_" + (i + 1))}.jpg"`}><img src="${esc(s)}" alt="" loading="lazy"></a>`).join("")}</div>
       <button class="btn" id="save">💾 Simpan ${p.images.length} gambar</button>
-      <p class="hint">${isPhone() ? 'Pilih "Simpan gambar" di menu share. Kalau nggak muncul, tekan lama tiap gambar.' : (canFolder() ? "Di PC keempat foto langsung disimpan ke folder pilihan lu." : "Di PC keempat foto diunduh sebagai satu file ZIP.") + " Klik satu gambar untuk mengunduhnya sendiri."}</p>
+      <p class="hint">${isPhone() ? 'Pilih "Simpan gambar" di menu share' + (p.images.length > 10 ? ", lalu tap lagi buat sisa fotonya (maks 10 sekali share)" : "") + '. Kalau nggak muncul, tekan lama tiap gambar.' : (canFolder() ? "Di PC semua foto langsung disimpan ke folder pilihan lu." : p.zip ? "Di PC semua foto diunduh sebagai satu file ZIP." : "Di PC foto diunduh satu per satu.") + " Klik satu gambar untuk mengunduhnya sendiri."}</p>
     </div>
     ${p.title ? `<div class="card"><p class="label">Judul (maks 90)</p><p class="text">${esc(p.title)}</p>
       <button class="btn ghost" id="copyTitle">📋 Copy judul</button></div>` : ""}
@@ -346,6 +387,7 @@ function bindDay() {
   document.getElementById("prev").onclick = () => idx > 0 && go(idx - 1);
   document.getElementById("next").onclick = () => idx < posts.length - 1 && go(idx + 1);
   document.getElementById("save").onclick = () => saveImages(p);
+  if (isPhone()) imageList(p).forEach(([src, name]) => getFile(src, name, "image/jpeg").catch(() => {}));  // ready before the tap
   document.getElementById("copyCap").onclick = () => copy(p.caption);
   const ct = document.getElementById("copyTitle"); if (ct) ct.onclick = () => copy(p.title);
   document.getElementById("done").onchange = e => { store.set("done:" + p.id, e.target.checked ? "1" : ""); render(); };
