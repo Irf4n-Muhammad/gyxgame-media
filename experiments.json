@@ -1,0 +1,43 @@
+[
+ {
+  "id": "experiment_2026-10/2026-10-11_witcher",
+  "date": "2026-10-11",
+  "slug": "witcher",
+  "game": "The Witcher",
+  "title": "The Witcher's creator lost billions",
+  "caption": "The Witcher's author sold the game rights for about $9,500 and turned down a share of the profits. The games sold 75 million copies. Would you have taken the cash? #thewitcher #witcher3 #geralt #cdprojektred #gaming #gamingfacts",
+  "test": "Fakta satu cerita besar, hook satu ide yang langsung kebaca, background terang, tiap slide ada konteks (nama, angka).",
+  "prediction": "5–20k views. Ceritanya sama kayak post 60k, tapi angka dan konteksnya lebih jelas.",
+  "sources": [
+   "https://pcgamesn.com/the-witcher-3-wild-hunt/the-witcher-rights-cost",
+   "https://bit-tech.net/news/gaming/witcher-author-demands-more-money-from-cd-projekt/1/",
+   "https://wccftech.com/witcher-3-sales-exceed-50-million-copies-worldwide-with-franchise-sales-surpassing-75-million-copies/amp/"
+  ],
+  "images": [
+   "experiment_2026-10/2026-10-11_witcher/tiktok_1.jpg",
+   "experiment_2026-10/2026-10-11_witcher/tiktok_2.jpg",
+   "experiment_2026-10/2026-10-11_witcher/tiktok_3.jpg",
+   "experiment_2026-10/2026-10-11_witcher/tiktok_4.jpg"
+  ]
+ },
+ {
+  "id": "experiment_2026-10/2026-10-11_metalgear",
+  "date": "2026-10-11",
+  "slug": "metalgear",
+  "game": "Metal Gear Solid",
+  "title": "Konami pushed out the man who made Metal Gear",
+  "caption": "Konami took Kojima's name off Metal Gear Solid V, cancelled Silent Hills and kept him from The Game Awards. Who was right? #metalgearsolid #kojima #konami #deathstranding #gaming #gamingfacts",
+  "test": "Format sama, tapi ceritanya drama yang memancing debat (Kojima vs Konami).",
+  "prediction": "1–5k views, tapi komennya lebih banyak dari Witcher.",
+  "sources": [
+   "https://www.gamerevolution.com/news/12069-kojima-was-prevented-from-attending-the-game-awards-2015-by-konami",
+   "https://www.tweaktown.com/news/48785/konami-forbids-hideo-kojima-attending-game-awards-2015/index.html"
+  ],
+  "images": [
+   "experiment_2026-10/2026-10-11_metalgear/tiktok_1.jpg",
+   "experiment_2026-10/2026-10-11_metalgear/tiktok_2.jpg",
+   "experiment_2026-10/2026-10-11_metalgear/tiktok_3.jpg",
+   "experiment_2026-10/2026-10-11_metalgear/tiktok_4.jpg"
+  ]
+ }
+]

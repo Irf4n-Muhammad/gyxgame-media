@@ -100,6 +100,8 @@ header h1 { font-size: 15px; letter-spacing: .08em; margin: 0; color: var(--mute
 /* prepare a week: TikTok drafts */
 .prep { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
 .prep .card { margin: 0; }
+.exp .label { margin-top: 12px; }
+.exp .pair { margin-top: 10px; }
 .steps { margin: 0; padding-left: 20px; font-size: 14px; }
 .steps li { margin: 2px 0; }
 .head { display: flex; align-items: center; gap: 12px; }
@@ -146,7 +148,7 @@ const DAYS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
 const MONTHS_LONG = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 const app = document.getElementById("app");
-let all = [], posts = [], idx = 0, tab = "day", persona = "", month = null, week = "", folderName = "";
+let all = [], exps = [], posts = [], idx = 0, tab = "day", persona = "", month = null, week = "", folderName = "";
 
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -325,12 +327,13 @@ function shell(inner) {
       <span class="muted">${count}/${posts.length} TikTok</span></span></header>
     <div class="tabs"><button data-tab="day" class="${tab === "day" ? "on" : ""}">Hari ini</button>
       <button data-tab="cal" class="${tab === "cal" ? "on" : ""}">Kalender</button>
-      <button data-tab="prep" class="${tab === "prep" ? "on" : ""}">Siapin</button></div>
+      <button data-tab="prep" class="${tab === "prep" ? "on" : ""}">Siapin</button>
+      <button data-tab="exp" class="${tab === "exp" ? "on" : ""}">Eksperimen</button></div>
     ${personas.length > 1 ? `<div class="chips">${["", ...personas].map(x =>
       `<button data-persona="${esc(x)}" class="${x === persona ? "on" : ""}">${x ? esc(x) : "Semua"}</button>`).join("")}</div>` : ""}
     ${inner}`;
   app.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => {
-    tab = b.dataset.tab; history.replaceState(null, "", tab === "cal" ? "#kalender" : tab === "prep" ? "#siapin" : location.pathname); render();
+    tab = b.dataset.tab; history.replaceState(null, "", { cal: "#kalender", prep: "#siapin", exp: "#eksperimen" }[tab] || location.pathname); render();
   });
   app.querySelectorAll("[data-persona]").forEach(b => b.onclick = () => { persona = b.dataset.persona; filter(); render(); });
   const fb = document.getElementById("folder");
@@ -487,9 +490,40 @@ function bindCal() {
   });
 }
 
+/* Experiments (experiments.json): hand-made test posts, uploaded to TikTok by hand. Not in posts.json, so
+   nothing here is posted to Instagram or Threads. */
+function expHTML() {
+  if (!exps.length) return '<p class="empty">Belum ada eksperimen.</p>';
+  return `<div class="prep exp">${exps.map((p, k) => {
+    const d = new Date(p.date + "T00:00:00"), done = isDone(p);
+    return `<div class="card">
+      <p class="game">${esc(p.game)}</p><p class="kp">${esc(p.title)}</p>
+      <p class="muted">${esc(dayLabel(d))} · cuma TikTok, upload manual</p>
+      <div class="strip">${p.images.map(s => `<a href="${esc(s)}" target="_blank"><img src="${esc(s)}" alt="" loading="lazy"></a>`).join("")}</div>
+      <div class="pair"><button class="btn" data-x="imgs" data-k="${k}">💾 Simpan ${p.images.length}</button>
+        <button class="btn ghost" data-x="cap" data-k="${k}">📋 Caption</button></div>
+      <p class="label">Yang dites</p><p class="text">${esc(p.test)}</p>
+      <p class="label">Tebakan</p><p class="text">${esc(p.prediction)}</p>
+      ${p.result ? `<p class="label">Hasil</p><p class="text">${esc(p.result)}</p>` : ""}
+      ${(p.sources || []).length ? `<p class="hint">Sumber: ${p.sources.map((u, i) => `<a href="${esc(u)}" target="_blank" rel="noopener">${i + 1}</a>`).join(" · ")}</p>` : ""}
+      <label class="done ${done ? "on" : ""}"><input type="checkbox" data-done="${k}" ${done ? "checked" : ""}> Sudah diposting di TikTok</label>
+    </div>`;
+  }).join("")}</div>`;
+}
+function bindExp() {
+  app.querySelectorAll("[data-x]").forEach(b => b.onclick = () => {
+    const p = exps[b.dataset.k]; b.dataset.x === "imgs" ? saveImages(p) : copy(p.caption);
+  });
+  app.querySelectorAll("[data-done]").forEach(c => c.onchange = () => {
+    store.set("done:" + exps[c.dataset.done].id, c.checked ? "1" : ""); render();
+  });
+  if (isPhone()) exps.forEach(p => imageList(p).forEach(([src, name]) => getFile(src, name, "image/jpeg").catch(() => {})));
+}
+
 /* Phone: one view with tabs. Laptop: calendar and the selected day side by side. */
 function render() {
   if (tab === "prep") { shell(prepHTML()); bindPrep(); }
+  else if (tab === "exp") { shell(expHTML()); bindExp(); }
   else if (wide.matches) {
     shell(`<div class="split"><section class="col-cal">${calHTML()}</section><section class="col-day">${dayHTML()}</section></div>`);
     bindCal(); bindDay();
@@ -517,6 +551,9 @@ if (params.get("code")) {
   document.getElementById("cc").onclick = () => copy(code);
   history.replaceState(null, "", location.pathname);
 } else {
+  fetch("experiments.json", { cache: "no-store" }).then(r => r.ok ? r.json() : []).catch(() => []).then(list => {
+    exps = list.sort((a, b) => b.date.localeCompare(a.date)); if (all.length) render();
+  });
   fetch("posts.json", { cache: "no-store" }).then(r => r.json()).then(list => {
     list.forEach(p => {  // when and on which local day it goes out
       p.at = postInstant(p); p.day = iso(p.at);
@@ -528,6 +565,7 @@ if (params.get("code")) {
     month = [focus.getFullYear(), focus.getMonth()];
     if (location.hash === "#kalender") tab = "cal";
     if (location.hash === "#siapin") tab = "prep";
+    if (location.hash === "#eksperimen") tab = "exp";
     render();
     if (canFolder()) savedFolder().then(d => { if (d) { folderName = d.name; render(); } });
   }).catch(() => { app.innerHTML = '<p class="empty">Gagal memuat data.</p>'; });
