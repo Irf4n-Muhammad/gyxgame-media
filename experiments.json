@@ -1,23 +1,23 @@
 [
  {
-  "id": "experiment_2026-10/2026-10-11_witcher",
+  "id": "experiment_2026-10/2026-10-11_minecraft",
   "date": "2026-10-11",
-  "slug": "witcher",
-  "game": "The Witcher",
-  "title": "The Witcher's creator lost billions",
-  "caption": "The Witcher's author sold the game rights for about $9,500 and turned down a share of the profits. The games sold 75 million copies. Would you have taken the cash? #thewitcher #witcher3 #geralt #cdprojektred #gaming #gamingfacts",
-  "test": "Fakta satu cerita besar, hook satu ide yang langsung kebaca, background terang, tiap slide ada konteks (nama, angka).",
-  "prediction": "5–20k views. Ceritanya sama kayak post 60k, tapi angka dan konteksnya lebih jelas.",
+  "slug": "minecraft",
+  "game": "Minecraft",
+  "title": "Minecraft's creator got billions and felt more alone than ever",
+  "caption": "Microsoft paid $2.5 billion for Minecraft. Its creator bought a $70 million mansion, then said he had never felt more isolated. Would you take the money? #minecraft #notch #mojang #microsoft #gaming #gamingfacts",
+  "test": "Fakta satu cerita besar soal uang, tapi kebalikan dari post Witcher 60k: kreatornya dapet miliaran dan tetep nggak bahagia. Hook satu ide, background terang, tiap slide ada konteks (nama, angka).",
+  "prediction": "3–15k views. Kalo kalah jauh dari Witcher, berarti yang bikin rame itu rasa nggak adil, bukan sekadar angka besar.",
   "sources": [
-   "https://pcgamesn.com/the-witcher-3-wild-hunt/the-witcher-rights-cost",
-   "https://bit-tech.net/news/gaming/witcher-author-demands-more-money-from-cd-projekt/1/",
-   "https://wccftech.com/witcher-3-sales-exceed-50-million-copies-worldwide-with-franchise-sales-surpassing-75-million-copies/amp/"
+   "https://money.cnn.com/2015/08/31/technology/minecraft-creator-tweets/",
+   "https://www.thelocal.se/20150901/lonely-minecraft-tycoon",
+   "https://gamesbeat.com/minecraft-creator-notch-moves-on-up-into-the-75m-megamansion-that-jay-z-and-beyonce-wanted/"
   ],
   "images": [
-   "experiment_2026-10/2026-10-11_witcher/tiktok_1.jpg",
-   "experiment_2026-10/2026-10-11_witcher/tiktok_2.jpg",
-   "experiment_2026-10/2026-10-11_witcher/tiktok_3.jpg",
-   "experiment_2026-10/2026-10-11_witcher/tiktok_4.jpg"
+   "experiment_2026-10/2026-10-11_minecraft/tiktok_1.jpg",
+   "experiment_2026-10/2026-10-11_minecraft/tiktok_2.jpg",
+   "experiment_2026-10/2026-10-11_minecraft/tiktok_3.jpg",
+   "experiment_2026-10/2026-10-11_minecraft/tiktok_4.jpg"
   ]
  },
  {
